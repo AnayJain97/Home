@@ -87,7 +87,7 @@ export default function BorrowingList() {
       { header: 'Date', key: 'date', width: 12 },
       { header: 'Amount (₹)', key: 'amount', width: 15 },
       { header: 'Name', key: 'clientName', width: 20 },
-      { header: 'Interest till FY End (₹)', key: 'interestTillFY', width: 22 },
+      { header: 'Interest till End Date (₹)', key: 'interestTillFY', width: 22 },
       { header: 'Total Credit (₹)', key: 'totalCredit', width: 15 },
     ], `Borrowings FY ${getCurrentFYLabel()}`, 'Borrowings');
   };
@@ -120,7 +120,7 @@ export default function BorrowingList() {
           <div className="value">{formatCurrency(totals.totalBorrowed)}</div>
         </div>
         <div className="summary-card">
-          <div className="label">Interest till FY End</div>
+          <div className="label">Interest till End Date</div>
           <div className="value" style={{ color: '#dc3545' }}>{formatCurrency(totals.totalInterest)}</div>
         </div>
         <div className="summary-card">
@@ -164,7 +164,7 @@ export default function BorrowingList() {
                 <SortTh col="date">Date</SortTh>
                 <SortTh col="amount" className="text-right">Amount</SortTh>
                 <SortTh col="client">Client</SortTh>
-                <SortTh col="interest" className="text-right">Int. till FY End</SortTh>
+                <SortTh col="interest" className="text-right">Int. till End Date</SortTh>
                 <SortTh col="total" className="text-right">Total Credit</SortTh>
                 <SortTh col="rate" className="text-right">Rate/Mo</SortTh>
                 {filter === 'all' && <th>Status</th>}

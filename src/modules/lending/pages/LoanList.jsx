@@ -83,7 +83,7 @@ export default function LoanList() {
       { header: 'Date', key: 'loanDate', width: 12 },
       { header: 'Amount (₹)', key: 'principal', width: 15 },
       { header: 'Name', key: 'clientName', width: 20 },
-      { header: 'Interest till FY End (₹)', key: 'interestTillFY', width: 22 },
+      { header: 'Interest till End Date (₹)', key: 'interestTillFY', width: 22 },
       { header: 'Total Due (₹)', key: 'totalDue', width: 15 },
     ], `Loans FY ${getCurrentFYLabel()}`, 'Loans');
   };
@@ -144,7 +144,7 @@ export default function LoanList() {
                 <SortTh col="principal" className="text-right">Principal</SortTh>
                 <SortTh col="client">Client</SortTh>
                 <SortTh col="interest" className="text-right">
-                  Int. till FY End
+                  Int. till End Date
                 </SortTh>
                 <SortTh col="total" className="text-right">Total Due</SortTh>
                 <SortTh col="rate" className="text-right">Rate/Mo</SortTh>

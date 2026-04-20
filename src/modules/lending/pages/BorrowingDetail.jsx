@@ -102,6 +102,22 @@ export default function BorrowingDetail() {
               <div className="detail-value">{borrowing.notes}</div>
             </div>
           )}
+          <div className="detail-item">
+            <div className="detail-label">Added By</div>
+            <div className="detail-value">{borrowing.createdBy || '—'}</div>
+          </div>
+          <div className="detail-item">
+            <div className="detail-label">Added On</div>
+            <div className="detail-value">{borrowing.createdAt ? formatDate(borrowing.createdAt) : '—'}</div>
+          </div>
+          <div className="detail-item">
+            <div className="detail-label">Modified By</div>
+            <div className="detail-value">{borrowing.modifiedBy || '—'}</div>
+          </div>
+          <div className="detail-item">
+            <div className="detail-label">Modified On</div>
+            <div className="detail-value">{borrowing.updatedAt ? formatDate(borrowing.updatedAt) : '—'}</div>
+          </div>
         </div>
       </div>
 

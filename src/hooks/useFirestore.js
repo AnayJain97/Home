@@ -111,6 +111,7 @@ export async function addDocument(collectionPath, data) {
   const docRef = await addDoc(collection(db, collectionPath), {
     ...data,
     createdAt: serverTimestamp(),
+    createdBy: auth.currentUser?.email || '',
   });
   return { id: docRef.id };
 }
@@ -122,6 +123,7 @@ export async function updateDocument(docPath, data) {
   await updateDoc(doc(db, docPath), {
     ...data,
     updatedAt: serverTimestamp(),
+    modifiedBy: auth.currentUser?.email || '',
   });
 }
 

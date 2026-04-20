@@ -52,7 +52,7 @@ export default function LoanDetail() {
       { header: 'Date', key: 'loanDate', width: 12 },
       { header: 'Amount (₹)', key: 'principal', width: 15 },
       { header: 'Name', key: 'clientName', width: 20 },
-      { header: 'Interest till FY End (₹)', key: 'interestTillFY', width: 22 },
+      { header: 'Interest till End Date (₹)', key: 'interestTillFY', width: 22 },
       { header: 'Total Due (₹)', key: 'totalDue', width: 15 },
     ], `Loan_${loan.clientName.replace(/\s+/g, '_')}`, 'Loan');
   };
@@ -120,6 +120,22 @@ export default function LoanDetail() {
               <div className="detail-value">{loan.notes}</div>
             </div>
           )}
+          <div className="detail-item">
+            <div className="detail-label">Added By</div>
+            <div className="detail-value">{loan.createdBy || '—'}</div>
+          </div>
+          <div className="detail-item">
+            <div className="detail-label">Added On</div>
+            <div className="detail-value">{loan.createdAt ? formatDate(loan.createdAt) : '—'}</div>
+          </div>
+          <div className="detail-item">
+            <div className="detail-label">Modified By</div>
+            <div className="detail-value">{loan.modifiedBy || '—'}</div>
+          </div>
+          <div className="detail-item">
+            <div className="detail-label">Modified On</div>
+            <div className="detail-value">{loan.updatedAt ? formatDate(loan.updatedAt) : '—'}</div>
+          </div>
         </div>
       </div>
 
@@ -139,7 +155,7 @@ export default function LoanDetail() {
             <div className="value text-primary">{summary.daysTillFYEnd}</div>
           </div>
           <div className="summary-card">
-            <div className="label">Interest till FY End</div>
+            <div className="label">Interest till End Date</div>
             <div className="value text-success">{formatCurrency(summary.interestTillFYEnd)}</div>
           </div>
           <div className="summary-card">

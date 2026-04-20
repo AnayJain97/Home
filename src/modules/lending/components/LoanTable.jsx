@@ -24,7 +24,7 @@ export default function LoanTable({ loans, summaries, filter }) {
             <th className="text-right">Principal</th>
             <th>Client</th>
             <th className="text-right">
-              Int. till FY End
+              Int. till End Date
               <Tooltip text="Hover rows for detailed formula" />
             </th>
             <th className="text-right">Total Due</th>

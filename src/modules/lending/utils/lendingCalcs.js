@@ -43,11 +43,13 @@ export function getInterestFormula(principal, monthlyRatePercent, fromDate = new
   const dailyRate = monthlyRatePercent / 30;
   const dailyInterest = principal * (dailyRate / 100);
   const total = dailyInterest * days;
-  const endLabel = endDate ? 'end date' : 'FY end (31 Mar)';
+  const targetStr = target.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  const endLabel = endDate ? `end date (${targetStr})` : `FY end (31 Mar)`;
 
   return `Monthly rate: ${monthlyRatePercent}%\n`
     + `Daily rate: ${monthlyRatePercent}% / 30 = ${dailyRate.toFixed(4)}%\n`
     + `Daily interest: ₹${principal.toLocaleString('en-IN')} × ${dailyRate.toFixed(4)}% = ₹${dailyInterest.toFixed(2)}\n`
+    + `End date: ${targetStr}\n`
     + `Days till ${endLabel}: ${days}\n`
     + `Interest = ${days} × ₹${dailyInterest.toFixed(2)} = ₹${total.toFixed(0)}`;
 }

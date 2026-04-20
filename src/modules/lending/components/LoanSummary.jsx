@@ -17,7 +17,7 @@ export default function LoanSummary({ loans, summaries }) {
         <div className="value">{formatCurrency(totalPrincipal)}</div>
       </div>
       <div className="summary-card">
-        <div className="label">Interest till FY End</div>
+        <div className="label">Interest till End Date</div>
         <div className="value" style={{ color: '#28a745' }}>{formatCurrency(totalInterestTillFY)}</div>
       </div>
       <div className="summary-card">
