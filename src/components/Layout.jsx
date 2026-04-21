@@ -7,7 +7,7 @@ import { useOrg } from '../context/OrgContext';
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, signOut } = useAuth();
-  const { selectedOrg, setSelectedOrg, organizations, orgInfo } = useOrg();
+  const { selectedOrg, setSelectedOrg, organizations, allOrganizations, orgInfo } = useOrg();
   const navigate = useNavigate();
 
   const handleOrgChange = (orgId) => {
@@ -39,9 +39,14 @@ export default function Layout() {
             value={selectedOrg}
             onChange={e => handleOrgChange(e.target.value)}
           >
-            {organizations.map(org => (
-              <option key={org.id} value={org.id}>{org.name}</option>
-            ))}
+            {allOrganizations.map(org => {
+              const hasAccess = organizations.some(o => o.id === org.id);
+              return (
+                <option key={org.id} value={org.id} disabled={!hasAccess}>
+                  {org.name}{!hasAccess ? ' 🔒' : ''}
+                </option>
+              );
+            })}
           </select>
           <div className="topbar-spacer" />
           <span className="user-name" style={{ color: 'rgba(255,255,255,0.9)' }}>{user?.displayName || 'MJ Finance'}</span>
