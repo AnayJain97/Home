@@ -15,8 +15,8 @@ import { useOrg, getOrgCollection } from '../../../context/OrgContext';
 export default function LoanList() {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('active');
-  const [sortCol, setSortCol] = useState(null);
-  const [sortDir, setSortDir] = useState('asc');
+  const [sortCol, setSortCol] = useState('date');
+  const [sortDir, setSortDir] = useState('desc');
   const [toast, setToast] = useState(null);
   const [deleting, setDeleting] = useState(null);
   const [quickEntryOpen, setQuickEntryOpen] = useState(false);
@@ -97,7 +97,7 @@ export default function LoanList() {
       { header: 'Client', key: 'clientName', width: 20 },
       { header: 'Int. till End Date', key: 'interestTillFY', width: 20 },
       { header: 'Total Due', key: 'totalDue', width: 15 },
-      { header: 'Rate/Mo', key: 'rate', width: 10 },
+      { header: 'Rate/Mo', key: 'rate', width: 10, noTotal: true },
     ];
     if (filter === 'all') cols.push({ header: 'Status', key: 'status', width: 10 });
 

@@ -10,7 +10,7 @@ import { useOrg, getOrgCollection } from '../../../context/OrgContext';
 
 export default function FinalizedView() {
   const [search, setSearch] = useState('');
-  const [sortCol, setSortCol] = useState(null);
+  const [sortCol, setSortCol] = useState('client');
   const [sortDir, setSortDir] = useState('asc');
   const { selectedOrg } = useOrg();
 
@@ -91,18 +91,6 @@ export default function FinalizedView() {
       totalBorrowingCredit: c.totalBorrowingCredit,
       netAmount: c.netAmount,
     }));
-
-    // Add grand total row
-    rows.push({
-      clientName: 'GRAND TOTAL',
-      totalLent: grandTotals.totalLent,
-      lendingInterest: grandTotals.totalLendingInterest,
-      totalLendingDue: grandTotals.totalLendingDue,
-      totalBorrowed: grandTotals.totalBorrowed,
-      borrowingInterest: grandTotals.totalBorrowingInterest,
-      totalBorrowingCredit: grandTotals.totalBorrowingCredit,
-      netAmount: grandTotals.netAmount,
-    });
 
     exportToExcel(rows, [
       { header: 'Client', key: 'clientName', width: 20 },

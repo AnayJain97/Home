@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import Sidebar from './Sidebar';
 import { useAuth } from '../hooks/useAuth';
@@ -8,6 +8,12 @@ export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, signOut } = useAuth();
   const { selectedOrg, setSelectedOrg, organizations, orgInfo } = useOrg();
+  const navigate = useNavigate();
+
+  const handleOrgChange = (orgId) => {
+    setSelectedOrg(orgId);
+    navigate('/money-lending/lending', { replace: true });
+  };
 
   return (
     <div className={`app-layout ${sidebarOpen ? 'sidebar-open' : ''}`}>
@@ -21,7 +27,7 @@ export default function Layout() {
           <select
             className="org-dropdown"
             value={selectedOrg}
-            onChange={e => setSelectedOrg(e.target.value)}
+            onChange={e => handleOrgChange(e.target.value)}
           >
             {organizations.map(org => (
               <option key={org.id} value={org.id}>{org.name}</option>

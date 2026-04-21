@@ -86,42 +86,22 @@ export default function BorrowingDetail() {
             <div className="detail-value">{formatPercent(borrowing.monthlyInterestRate)}</div>
           </div>
           <div className="detail-item">
-            <div className="detail-label">Borrowing Date</div>
+            <div className="detail-label">Borrowing Start Date</div>
             <div className="detail-value">{formatDate(borrowing.borrowDate)}</div>
           </div>
-          {borrowing.endDate && (
-            <div className="detail-item">
-              <div className="detail-label">End Date</div>
-              <div className="detail-value">{formatDate(borrowing.endDate)}</div>
-            </div>
-          )}
+          <div className="detail-item">
+            <div className="detail-label">Borrowing End Date</div>
+            <div className="detail-value">{borrowing.endDate ? formatDate(borrowing.endDate) : '—'}</div>
+          </div>
           <div className="detail-item">
             <div className="detail-label">Status</div>
             <div className="detail-value">
               <span className={`badge badge-${status}`}>{status}</span>
             </div>
           </div>
-          {borrowing.notes && (
-            <div className="detail-item">
-              <div className="detail-label">Notes</div>
-              <div className="detail-value">{borrowing.notes}</div>
-            </div>
-          )}
           <div className="detail-item">
-            <div className="detail-label">Added By</div>
-            <div className="detail-value">{borrowing.createdBy || '—'}</div>
-          </div>
-          <div className="detail-item">
-            <div className="detail-label">Added On</div>
-            <div className="detail-value">{borrowing.createdAt ? formatDate(borrowing.createdAt) : '—'}</div>
-          </div>
-          <div className="detail-item">
-            <div className="detail-label">Modified By</div>
-            <div className="detail-value">{borrowing.modifiedBy || '—'}</div>
-          </div>
-          <div className="detail-item">
-            <div className="detail-label">Modified On</div>
-            <div className="detail-value">{borrowing.updatedAt ? formatDate(borrowing.updatedAt) : '—'}</div>
+            <div className="detail-label">Notes</div>
+            <div className="detail-value">{borrowing.notes || '—'}</div>
           </div>
         </div>
       </div>

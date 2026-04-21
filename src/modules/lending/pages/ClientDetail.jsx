@@ -47,7 +47,7 @@ export default function ClientDetail() {
         columns: [
           { header: 'Date', key: 'date', width: 12 },
           { header: 'Principal', key: 'principal', width: 15 },
-          { header: 'Rate/Mo', key: 'rate', width: 10 },
+          { header: 'Rate/Mo', key: 'rate', width: 10, noTotal: true },
           { header: 'Interest', key: 'interest', width: 15 },
           { header: 'Total Due', key: 'totalDue', width: 15 },
           { header: 'Status', key: 'status', width: 10 },
@@ -69,7 +69,7 @@ export default function ClientDetail() {
         columns: [
           { header: 'Date', key: 'date', width: 12 },
           { header: 'Amount', key: 'amount', width: 15 },
-          { header: 'Rate/Mo', key: 'rate', width: 10 },
+          { header: 'Rate/Mo', key: 'rate', width: 10, noTotal: true },
           { header: 'Interest', key: 'interest', width: 15 },
           { header: 'Total Credit', key: 'totalCredit', width: 15 },
           { header: 'Status', key: 'status', width: 10 },

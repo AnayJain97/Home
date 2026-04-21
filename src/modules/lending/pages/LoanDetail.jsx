@@ -84,8 +84,12 @@ export default function LoanDetail() {
             <div className="detail-value">{formatPercent(loan.monthlyInterestRate)}</div>
           </div>
           <div className="detail-item">
-            <div className="detail-label">Loan Date</div>
+            <div className="detail-label">Loan Start Date</div>
             <div className="detail-value">{formatDate(loan.loanDate)}</div>
+          </div>
+          <div className="detail-item">
+            <div className="detail-label">Loan End Date</div>
+            <div className="detail-value">{loan.endDate ? formatDate(loan.endDate) : '—'}</div>
           </div>
           <div className="detail-item">
             <div className="detail-label">Status</div>
@@ -93,27 +97,9 @@ export default function LoanDetail() {
               <span className={`badge badge-${loan.status}`}>{loan.status}</span>
             </div>
           </div>
-          {loan.notes && (
-            <div className="detail-item">
-              <div className="detail-label">Notes</div>
-              <div className="detail-value">{loan.notes}</div>
-            </div>
-          )}
           <div className="detail-item">
-            <div className="detail-label">Added By</div>
-            <div className="detail-value">{loan.createdBy || '—'}</div>
-          </div>
-          <div className="detail-item">
-            <div className="detail-label">Added On</div>
-            <div className="detail-value">{loan.createdAt ? formatDate(loan.createdAt) : '—'}</div>
-          </div>
-          <div className="detail-item">
-            <div className="detail-label">Modified By</div>
-            <div className="detail-value">{loan.modifiedBy || '—'}</div>
-          </div>
-          <div className="detail-item">
-            <div className="detail-label">Modified On</div>
-            <div className="detail-value">{loan.updatedAt ? formatDate(loan.updatedAt) : '—'}</div>
+            <div className="detail-label">Notes</div>
+            <div className="detail-value">{loan.notes || '—'}</div>
           </div>
         </div>
       </div>

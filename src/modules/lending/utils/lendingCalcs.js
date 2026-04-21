@@ -51,7 +51,7 @@ export function getInterestFormula(principal, monthlyRatePercent, fromDate = new
     + `Daily interest: ₹${principal.toLocaleString('en-IN')} × ${dailyRate.toFixed(4)}% = ₹${dailyInterest.toFixed(2)}\n`
     + `End date: ${targetStr}\n`
     + `Days till ${endLabel}: ${days}\n`
-    + `Interest = ${days} × ₹${dailyInterest.toFixed(2)} = ₹${total.toFixed(0)}`;
+    + `Interest = ${days} × ₹${dailyInterest.toFixed(2)} = ₹${total.toFixed(2)}`;
 }
 
 /**
@@ -64,8 +64,8 @@ export function getLendingSummary(loan) {
   const endDate = loan.endDate ? toJSDate(loan.endDate) : null;
   const monthlyInterest = calcMonthlyInterest(principal, loan.monthlyInterestRate);
   const daysTillEnd = getDaysTillEnd(loanDate, endDate);
-  const interestTillFYEnd = calcInterestTillFYEnd(principal, loan.monthlyInterestRate, loanDate, endDate);
-  const totalDue = principal + interestTillFYEnd;
+  const interestTillFYEnd = Math.round(calcInterestTillFYEnd(principal, loan.monthlyInterestRate, loanDate, endDate) * 100) / 100;
+  const totalDue = Math.round((principal + interestTillFYEnd) * 100) / 100;
   const formulaText = getInterestFormula(principal, loan.monthlyInterestRate, loanDate, endDate);
 
   return { principal, monthlyInterest, daysTillFYEnd: daysTillEnd, interestTillFYEnd, totalDue, formulaText };
@@ -81,8 +81,8 @@ export function getBorrowingSummary(borrowing) {
   const endDate = borrowing.endDate ? toJSDate(borrowing.endDate) : null;
   const monthlyInterest = calcMonthlyInterest(amount, borrowing.monthlyInterestRate);
   const daysTillEnd = getDaysTillEnd(borrowDate, endDate);
-  const interestTillFYEnd = calcInterestTillFYEnd(amount, borrowing.monthlyInterestRate, borrowDate, endDate);
-  const totalCredit = amount + interestTillFYEnd;
+  const interestTillFYEnd = Math.round(calcInterestTillFYEnd(amount, borrowing.monthlyInterestRate, borrowDate, endDate) * 100) / 100;
+  const totalCredit = Math.round((amount + interestTillFYEnd) * 100) / 100;
   const formulaText = getInterestFormula(amount, borrowing.monthlyInterestRate, borrowDate, endDate);
 
   return { amount, monthlyInterest, daysTillFYEnd: daysTillEnd, interestTillFYEnd, totalCredit, formulaText };
@@ -114,15 +114,15 @@ export function getClientFinalized(loans, borrowings) {
     const lendingSummaries = client.lendings.map(getLendingSummary);
     const borrowingSummaries = client.borrowings.map(getBorrowingSummary);
 
-    const totalLent = lendingSummaries.reduce((s, v) => s + v.principal, 0);
-    const totalLendingInterest = lendingSummaries.reduce((s, v) => s + v.interestTillFYEnd, 0);
-    const totalLendingDue = totalLent + totalLendingInterest;
+    const totalLent = Math.round(lendingSummaries.reduce((s, v) => s + v.principal, 0) * 100) / 100;
+    const totalLendingInterest = Math.round(lendingSummaries.reduce((s, v) => s + v.interestTillFYEnd, 0) * 100) / 100;
+    const totalLendingDue = Math.round((totalLent + totalLendingInterest) * 100) / 100;
 
-    const totalBorrowed = borrowingSummaries.reduce((s, v) => s + v.amount, 0);
-    const totalBorrowingInterest = borrowingSummaries.reduce((s, v) => s + v.interestTillFYEnd, 0);
-    const totalBorrowingCredit = totalBorrowed + totalBorrowingInterest;
+    const totalBorrowed = Math.round(borrowingSummaries.reduce((s, v) => s + v.amount, 0) * 100) / 100;
+    const totalBorrowingInterest = Math.round(borrowingSummaries.reduce((s, v) => s + v.interestTillFYEnd, 0) * 100) / 100;
+    const totalBorrowingCredit = Math.round((totalBorrowed + totalBorrowingInterest) * 100) / 100;
 
-    const netAmount = totalLendingDue - totalBorrowingCredit;
+    const netAmount = Math.round((totalLendingDue - totalBorrowingCredit) * 100) / 100;
 
     return {
       clientName: client.clientName,

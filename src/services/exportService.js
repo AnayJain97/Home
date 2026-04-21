@@ -1,11 +1,23 @@
 import * as XLSX from 'xlsx';
 
 /**
+ * Build a totals row for numeric columns.
+ */
+function buildTotalsRow(data, columns) {
+  return columns.map((c, idx) => {
+    if (c.noTotal) return '';
+    const vals = data.map(row => row[c.key]);
+    const allNumeric = vals.length > 0 && vals.every(v => typeof v === 'number' && !isNaN(v));
+    if (allNumeric) {
+      return Math.round(vals.reduce((s, v) => s + v, 0) * 100) / 100;
+    }
+    return idx === 0 ? 'TOTAL' : '';
+  });
+}
+
+/**
  * Export data to an Excel file with timestamp in filename.
- * @param {Object[]} data - Array of row objects
- * @param {Object[]} columns - Array of { header: string, key: string, width?: number }
- * @param {string} sheetName - Name of the worksheet
- * @param {string} filePrefix - Prefix for the filename (e.g. "Loans")
+ * Automatically appends a TOTAL row for numeric columns.
  */
 export function exportToExcel(data, columns, sheetName, filePrefix) {
   const now = new Date();
@@ -13,8 +25,10 @@ export function exportToExcel(data, columns, sheetName, filePrefix) {
 
   const headers = columns.map(c => c.header);
   const rows = data.map(row => columns.map(c => row[c.key] ?? ''));
+  const totals = buildTotalsRow(data, columns);
+  const emptyRow = columns.map(() => '');
 
-  const wsData = [headers, ...rows];
+  const wsData = [headers, ...rows, emptyRow, totals];
   const ws = XLSX.utils.aoa_to_sheet(wsData);
 
   // Set column widths
@@ -27,8 +41,7 @@ export function exportToExcel(data, columns, sheetName, filePrefix) {
 
 /**
  * Export multiple sheets to a single Excel file.
- * @param {Object[]} sheets - Array of { data, columns, sheetName }
- * @param {string} filePrefix - Prefix for the filename
+ * Automatically appends a TOTAL row per sheet for numeric columns.
  */
 export function exportMultiSheetExcel(sheets, filePrefix) {
   const now = new Date();
@@ -39,7 +52,9 @@ export function exportMultiSheetExcel(sheets, filePrefix) {
   for (const sheet of sheets) {
     const headers = sheet.columns.map(c => c.header);
     const rows = sheet.data.map(row => sheet.columns.map(c => row[c.key] ?? ''));
-    const wsData = [headers, ...rows];
+    const totals = buildTotalsRow(sheet.data, sheet.columns);
+    const emptyRow = sheet.columns.map(() => '');
+    const wsData = [headers, ...rows, emptyRow, totals];
     const ws = XLSX.utils.aoa_to_sheet(wsData);
     ws['!cols'] = sheet.columns.map(c => ({ wch: c.width || 15 }));
     XLSX.utils.book_append_sheet(wb, ws, sheet.sheetName);
