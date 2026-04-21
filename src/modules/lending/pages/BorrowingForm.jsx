@@ -1,12 +1,16 @@
-import { useState, useMemo } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useCollection, addDocument } from '../../../hooks/useFirestore';
-import { fromInputDate } from '../../../utils/dateUtils';
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useCollection, useDocument, addDocument, updateDocument } from '../../../hooks/useFirestore';
+import { fromInputDate, toInputDate, getFYEndDate } from '../../../utils/dateUtils';
 import Toast from '../../../components/Toast';
 
 export default function BorrowingForm() {
   const navigate = useNavigate();
+  const { id } = useParams();
+  const isEdit = Boolean(id);
+
   const { data: allLoans } = useCollection('loans');
+  const { data: existing, loading: loadingDoc } = useDocument(isEdit ? `borrowings/${id}` : null);
 
   // Build client → rate map from existing lendings for auto-fill
   const clientRates = useMemo(() => {
@@ -25,13 +29,27 @@ export default function BorrowingForm() {
   const [form, setForm] = useState({
     clientName: '',
     amount: '',
-    monthlyInterestRate: '',
+    monthlyInterestRate: '0.8',
     borrowDate: new Date().toISOString().slice(0, 10),
-    endDate: '',
+    endDate: toInputDate(getFYEndDate()),
     notes: '',
   });
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
+
+  // Pre-fill form if editing
+  useEffect(() => {
+    if (isEdit && existing) {
+      setForm({
+        clientName: existing.clientName || '',
+        amount: String(existing.amount || ''),
+        monthlyInterestRate: String(existing.monthlyInterestRate || ''),
+        borrowDate: toInputDate(existing.borrowDate),
+        endDate: existing.endDate ? toInputDate(existing.endDate) : '',
+        notes: existing.notes || '',
+      });
+    }
+  }, [isEdit, existing]);
 
   // Auto-fill rate when client name matches an existing lending client
   const handleChange = (e) => {
@@ -67,7 +85,7 @@ export default function BorrowingForm() {
 
     setSubmitting(true);
     try {
-      await addDocument('borrowings', {
+      const data = {
         clientName: form.clientName.trim(),
         amount,
         monthlyInterestRate: rate,
@@ -75,9 +93,17 @@ export default function BorrowingForm() {
         endDate: form.endDate ? fromInputDate(form.endDate) : null,
         notes: form.notes.trim(),
         status: 'active',
-      });
-      setToast({ message: 'Borrowing recorded successfully', type: 'success' });
-      setTimeout(() => navigate('/lending/borrowings'), 500);
+      };
+
+      if (isEdit) {
+        await updateDocument(`borrowings/${id}`, data);
+        setToast({ message: 'Borrowing updated successfully', type: 'success' });
+        setTimeout(() => navigate(`/money-lending/borrowing/${id}`), 500);
+      } else {
+        const docRef = await addDocument('borrowings', data);
+        setToast({ message: 'Borrowing recorded successfully', type: 'success' });
+        setTimeout(() => navigate(`/money-lending/borrowing/${docRef.id}`), 500);
+      }
     } catch (err) {
       console.error(err);
       setToast({ message: 'Error saving. Please try again.', type: 'error' });
@@ -86,17 +112,35 @@ export default function BorrowingForm() {
     }
   };
 
+  if (isEdit && loadingDoc) {
+    return <div className="loading-screen"><div className="spinner" /><p>Loading borrowing...</p></div>;
+  }
+
   return (
     <div>
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <Link to="/lending/borrowings" className="btn btn-sm btn-outline" title="Back">←</Link>
-          <h1>Record Borrowing</h1>
+          <Link to="/money-lending/borrowing" className="btn btn-sm btn-outline" title="Back">←</Link>
+          <h1>{isEdit ? 'Edit Borrowing' : 'New Borrowing'}</h1>
         </div>
       </div>
 
       <div className="card">
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} onKeyDown={(e) => {
+          if (e.key === 'Enter' && !e.ctrlKey) {
+            const inputs = Array.from(e.currentTarget.querySelectorAll('input, select, textarea'));
+            const idx = inputs.indexOf(e.target);
+            if (idx >= 0 && idx < inputs.length - 1) {
+              e.preventDefault();
+              inputs[idx + 1].focus();
+            } else if (idx === inputs.length - 1) {
+              e.preventDefault();
+            }
+          } else if (e.key === 'Enter' && e.ctrlKey) {
+            e.preventDefault();
+            handleSubmit(e);
+          }
+        }}>
           <div className="form-grid">
             <div className="form-group">
               <label>Client Name *</label>
@@ -122,9 +166,29 @@ export default function BorrowingForm() {
                 name="amount"
                 value={form.amount}
                 onChange={handleChange}
-                placeholder="e.g. 50000"
+                placeholder="e.g. 100000"
                 min="1"
                 step="any"
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>Borrowing End Date</label>
+              <input
+                type="date"
+                name="endDate"
+                value={form.endDate}
+                onChange={handleChange}
+                min={form.borrowDate}
+              />
+            </div>
+            <div className="form-group">
+              <label>Borrowing Start Date *</label>
+              <input
+                type="date"
+                name="borrowDate"
+                value={form.borrowDate}
+                onChange={handleChange}
                 required
               />
             </div>
@@ -135,31 +199,11 @@ export default function BorrowingForm() {
                 name="monthlyInterestRate"
                 value={form.monthlyInterestRate}
                 onChange={handleChange}
-                placeholder="Auto-filled from lending"
+                placeholder="e.g. 0.8"
                 min="0"
                 max="100"
                 step="any"
                 required
-              />
-            </div>
-            <div className="form-group">
-              <label>Date *</label>
-              <input
-                type="date"
-                name="borrowDate"
-                value={form.borrowDate}
-                onChange={handleChange}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label>End Date</label>
-              <input
-                type="date"
-                name="endDate"
-                value={form.endDate}
-                onChange={handleChange}
-                min={form.borrowDate}
               />
             </div>
             <div className="form-group">
@@ -175,11 +219,12 @@ export default function BorrowingForm() {
           </div>
           <div className="form-actions">
             <button type="submit" className="btn btn-primary" disabled={submitting}>
-              {submitting ? 'Saving...' : 'Record Borrowing'}
+              {submitting ? 'Saving...' : (isEdit ? 'Update Borrowing' : 'Record Borrowing')}
             </button>
             <button type="button" className="btn btn-outline" onClick={() => navigate(-1)}>
               Cancel
             </button>
+            <span style={{ fontSize: '0.75rem', color: '#999', alignSelf: 'center' }}>Ctrl+Enter to save</span>
           </div>
         </form>
       </div>

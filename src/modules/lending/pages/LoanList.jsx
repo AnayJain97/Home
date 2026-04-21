@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { useCollection } from '../../../hooks/useFirestore';
+import { useCollection, deleteDocument } from '../../../hooks/useFirestore';
 import { getLendingSummary } from '../utils/lendingCalcs';
 import LoanSummary from '../components/LoanSummary';
 import LendingTabs from '../components/LendingTabs';
@@ -8,12 +8,15 @@ import { exportToExcel } from '../../../services/exportService';
 import { formatCurrency, formatPercent } from '../../../utils/formatUtils';
 import { formatDate, getCurrentFYLabel } from '../../../utils/dateUtils';
 import Tooltip from '../../../components/Tooltip';
+import Toast from '../../../components/Toast';
 
 export default function LoanList() {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('active');
   const [sortCol, setSortCol] = useState(null);
   const [sortDir, setSortDir] = useState('asc');
+  const [toast, setToast] = useState(null);
+  const [deleting, setDeleting] = useState(null);
 
   const { data: allLoans, loading } = useCollection('loans');
 
@@ -71,21 +74,55 @@ export default function LoanList() {
   );
 
   const handleExport = () => {
-    const rows = sortedData.map(({ loan, summary: s }) => ({
-      loanDate: formatDate(loan.loanDate),
-      principal: loan.principalAmount,
-      clientName: loan.clientName,
-      interestTillFY: s.interestTillFYEnd,
-      totalDue: s.totalDue,
-    }));
+    const rows = sortedData.map(({ loan, summary: s }) => {
+      const row = {
+        loanDate: formatDate(loan.loanDate),
+        principal: loan.principalAmount,
+        clientName: loan.clientName,
+        interestTillFY: s.interestTillFYEnd,
+        totalDue: s.totalDue,
+        rate: loan.monthlyInterestRate,
+      };
+      if (filter === 'all') row.status = loan.status;
+      return row;
+    });
 
-    exportToExcel(rows, [
+    const cols = [
       { header: 'Date', key: 'loanDate', width: 12 },
-      { header: 'Amount (₹)', key: 'principal', width: 15 },
-      { header: 'Name', key: 'clientName', width: 20 },
-      { header: 'Interest till End Date (₹)', key: 'interestTillFY', width: 22 },
-      { header: 'Total Due (₹)', key: 'totalDue', width: 15 },
-    ], `Loans FY ${getCurrentFYLabel()}`, 'Loans');
+      { header: 'Principal', key: 'principal', width: 15 },
+      { header: 'Client', key: 'clientName', width: 20 },
+      { header: 'Int. till End Date', key: 'interestTillFY', width: 20 },
+      { header: 'Total Due', key: 'totalDue', width: 15 },
+      { header: 'Rate/Mo', key: 'rate', width: 10 },
+    ];
+    if (filter === 'all') cols.push({ header: 'Status', key: 'status', width: 10 });
+
+    exportToExcel(rows, cols, `Loans FY ${getCurrentFYLabel()}`, `Loans_${getCurrentFYLabel()}`);
+  };
+
+  const handleDelete = async (id, name) => {
+    if (!window.confirm(`Delete closed loan for "${name}"?`)) return;
+    setDeleting(id);
+    try {
+      await deleteDocument(`loans/${id}`);
+      setToast({ message: 'Loan deleted', type: 'success' });
+    } catch (err) {
+      setToast({ message: 'Error deleting loan', type: 'error' });
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    const closedLoans = allLoans.filter(l => l.status === 'closed');
+    if (!closedLoans.length) return;
+    if (!window.confirm(`Delete all ${closedLoans.length} closed loan(s)? This cannot be undone.`)) return;
+    try {
+      await Promise.all(closedLoans.map(l => deleteDocument(`loans/${l.id}`)));
+      setToast({ message: `${closedLoans.length} closed loan(s) deleted`, type: 'success' });
+    } catch (err) {
+      setToast({ message: 'Error deleting some loans', type: 'error' });
+    }
   };
 
   if (loading) {
@@ -99,9 +136,12 @@ export default function LoanList() {
       <div className="page-header">
         <h1>Lendings (Money Given Out)</h1>
         <div className="page-actions">
-          <Link to="/lending/new" className="btn btn-primary">+ New Loan</Link>
+          <Link to="/money-lending/lending/new" className="btn btn-primary">+ New Loan</Link>
           {filteredLoans.length > 0 && (
             <button className="btn btn-export" onClick={handleExport}>📥 Export Excel</button>
+          )}
+          {filter === 'closed' && filteredLoans.length > 0 && (
+            <button className="btn btn-danger" onClick={handleDeleteAll}>🗑️ Delete All Closed</button>
           )}
         </div>
       </div>
@@ -132,14 +172,14 @@ export default function LoanList() {
       {sortedData.length === 0 ? (
         <div className="empty-state">
           <div className="empty-state-icon">💰</div>
-          <p>No loans found. Start by adding your first loan!</p>
-          <Link to="/lending/new" className="btn btn-primary">Add New Loan</Link>
+          <p>No loans found.</p>
         </div>
       ) : (
-        <div className="table-wrap">
+        <div className={`table-wrap${filter === 'closed' ? ' table-closed' : ''}`}>
           <table>
             <thead>
               <tr>
+                {filter === 'closed' && <th style={{ width: '2.5rem' }}></th>}
                 <SortTh col="date">Date</SortTh>
                 <SortTh col="principal" className="text-right">Principal</SortTh>
                 <SortTh col="client">Client</SortTh>
@@ -154,10 +194,22 @@ export default function LoanList() {
             <tbody>
               {sortedData.map(({ loan, summary: s }) => (
                 <tr key={loan.id}>
+                  {filter === 'closed' && (
+                    <td>
+                      <button
+                        className="btn-icon-delete"
+                        title="Delete"
+                        onClick={() => handleDelete(loan.id, loan.clientName)}
+                        disabled={deleting === loan.id}
+                      >
+                        {deleting === loan.id ? '...' : '🗑️'}
+                      </button>
+                    </td>
+                  )}
                   <td>{formatDate(loan.loanDate)}</td>
                   <td className="text-right">{formatCurrency(loan.principalAmount)}</td>
                   <td>
-                    <Link to={`/lending/${loan.id}`} style={{ color: '#4361ee', fontWeight: 500 }}>
+                    <Link to={`/money-lending/lending/${loan.id}`} style={{ color: '#4361ee', fontWeight: 500 }}>
                       {loan.clientName}
                     </Link>
                   </td>
@@ -180,6 +232,8 @@ export default function LoanList() {
           </table>
         </div>
       )}
+
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>
   );
 }

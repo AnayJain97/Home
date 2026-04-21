@@ -3,9 +3,8 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useDocument, updateDocument } from '../../../hooks/useFirestore';
 import { getLendingSummary } from '../utils/lendingCalcs';
 import { formatCurrency, formatPercent } from '../../../utils/formatUtils';
-import { formatDate, getCurrentFYLabel } from '../../../utils/dateUtils';
+import { formatDate } from '../../../utils/dateUtils';
 import Toast from '../../../components/Toast';
-import { exportToExcel } from '../../../services/exportService';
 
 export default function LoanDetail() {
   const { id } = useParams();
@@ -38,24 +37,7 @@ export default function LoanDetail() {
     }
   };
 
-  const handleExport = () => {
-    if (!loan || !summary) return;
-    const rows = [{
-      loanDate: formatDate(loan.loanDate),
-      principal: loan.principalAmount,
-      clientName: loan.clientName,
-      interestTillFY: summary.interestTillFYEnd,
-      totalDue: summary.totalDue,
-    }];
 
-    exportToExcel(rows, [
-      { header: 'Date', key: 'loanDate', width: 12 },
-      { header: 'Amount (₹)', key: 'principal', width: 15 },
-      { header: 'Name', key: 'clientName', width: 20 },
-      { header: 'Interest till End Date (₹)', key: 'interestTillFY', width: 22 },
-      { header: 'Total Due (₹)', key: 'totalDue', width: 15 },
-    ], `Loan_${loan.clientName.replace(/\s+/g, '_')}`, 'Loan');
-  };
 
   if (loadingLoan) {
     return <div className="loading-screen"><div className="spinner" /><p>Loading loan details...</p></div>;
@@ -66,7 +48,7 @@ export default function LoanDetail() {
       <div className="empty-state">
         <div className="empty-state-icon">❌</div>
         <p>Loan not found.</p>
-        <Link to="/lending" className="btn btn-primary">Back to Loans</Link>
+        <Link to="/money-lending/lending" className="btn btn-primary">Back to Loans</Link>
       </div>
     );
   }
@@ -75,17 +57,16 @@ export default function LoanDetail() {
     <div>
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <Link to="/lending" className="btn btn-sm btn-outline" title="Back to loans">←</Link>
+          <Link to="/money-lending/lending" className="btn btn-sm btn-outline" title="Back to loans">←</Link>
           <h1>{loan.clientName}</h1>
         </div>
         <div className="page-actions">
-          <Link to={`/lending/${id}/edit`} className="btn btn-outline">✏️ Edit</Link>
+          <Link to={`/money-lending/lending/${id}/edit`} className="btn btn-outline">✏️ Edit</Link>
           {loan.status === 'active' ? (
             <button className="btn btn-danger" onClick={handleCloseLoan}>Close Loan</button>
           ) : (
             <button className="btn btn-success" onClick={handleReopenLoan}>Reopen Loan</button>
           )}
-          <button className="btn btn-export" onClick={handleExport}>📥 Export Excel</button>
         </div>
       </div>
 
@@ -103,10 +84,6 @@ export default function LoanDetail() {
           <div className="detail-item">
             <div className="detail-label">Loan Date</div>
             <div className="detail-value">{formatDate(loan.loanDate)}</div>
-          </div>
-          <div className="detail-item">
-            <div className="detail-label">Phone</div>
-            <div className="detail-value">{loan.clientPhone || '—'}</div>
           </div>
           <div className="detail-item">
             <div className="detail-label">Status</div>

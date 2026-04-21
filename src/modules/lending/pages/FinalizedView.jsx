@@ -104,14 +104,14 @@ export default function FinalizedView() {
 
     exportToExcel(rows, [
       { header: 'Client', key: 'clientName', width: 20 },
-      { header: 'Total Lent (₹)', key: 'totalLent', width: 15 },
-      { header: 'Lending Interest (₹)', key: 'lendingInterest', width: 18 },
-      { header: 'Total Lending Due (₹)', key: 'totalLendingDue', width: 18 },
-      { header: 'Total Borrowed (₹)', key: 'totalBorrowed', width: 16 },
-      { header: 'Borrowing Interest (₹)', key: 'borrowingInterest', width: 18 },
-      { header: 'Total Credit (₹)', key: 'totalBorrowingCredit', width: 16 },
-      { header: 'Net Amount (₹)', key: 'netAmount', width: 15 },
-    ], `Finalized FY ${getCurrentFYLabel()}`, 'Settlement');
+      { header: 'Lent', key: 'totalLent', width: 15 },
+      { header: 'Lending Int.', key: 'lendingInterest', width: 15 },
+      { header: 'Lending Due', key: 'totalLendingDue', width: 15 },
+      { header: 'Borrowed', key: 'totalBorrowed', width: 15 },
+      { header: 'Borrowing Int.', key: 'borrowingInterest', width: 15 },
+      { header: 'Credit', key: 'totalBorrowingCredit', width: 15 },
+      { header: 'Net', key: 'netAmount', width: 15 },
+    ], `Finalized FY ${getCurrentFYLabel()}`, `Finalized_${getCurrentFYLabel()}`);
   };
 
   if (loadingLoans || loadingBorrowings) {
@@ -183,7 +183,7 @@ export default function FinalizedView() {
               {sorted.map(c => (
                 <tr key={c.clientName}>
                   <td style={{ fontWeight: 500 }}>
-                    <Link to={`/lending/client/${encodeURIComponent(c.clientName)}`} style={{ color: '#4361ee', fontWeight: 500 }}>
+                    <Link to={`/money-lending/client/${encodeURIComponent(c.clientName)}`} style={{ color: '#4361ee', fontWeight: 500 }}>
                       {c.clientName}
                     </Link>
                   </td>

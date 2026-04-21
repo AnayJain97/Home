@@ -4,7 +4,7 @@ import { useState } from 'react';
 // Config-driven nav items — add new modules here
 const NAV_ITEMS = [
   { label: 'Apps', path: '/', icon: '📊' },
-  { label: 'Lending', path: '/lending', icon: '💰' },
+  { label: 'Money Lending', path: '/money-lending/lending', icon: '💰' },
   // Future modules:
   // { label: 'Invoices', path: '/invoices', icon: '📄' },
   // { label: 'Expenses', path: '/expenses', icon: '📋' },

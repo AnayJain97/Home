@@ -5,6 +5,7 @@ import { getLendingSummary, getBorrowingSummary, getClientFinalized } from '../u
 import { formatCurrency, formatPercent } from '../../../utils/formatUtils';
 import { formatDate } from '../../../utils/dateUtils';
 import Tooltip from '../../../components/Tooltip';
+import { exportMultiSheetExcel } from '../../../services/exportService';
 
 export default function ClientDetail() {
   const { name } = useParams();
@@ -35,12 +36,69 @@ export default function ClientDetail() {
     return <div className="loading-screen"><div className="spinner" /><p>Loading...</p></div>;
   }
 
+  const handleExport = () => {
+    const sheets = [];
+
+    if (clientLoans.length > 0) {
+      sheets.push({
+        sheetName: 'Lendings',
+        columns: [
+          { header: 'Date', key: 'date', width: 12 },
+          { header: 'Principal', key: 'principal', width: 15 },
+          { header: 'Rate/Mo', key: 'rate', width: 10 },
+          { header: 'Interest', key: 'interest', width: 15 },
+          { header: 'Total Due', key: 'totalDue', width: 15 },
+          { header: 'Status', key: 'status', width: 10 },
+        ],
+        data: clientLoans.map((loan, idx) => ({
+          date: formatDate(loan.loanDate),
+          principal: loan.principalAmount,
+          rate: loan.monthlyInterestRate,
+          interest: loanSummaries[idx].interestTillFYEnd,
+          totalDue: loanSummaries[idx].totalDue,
+          status: loan.status,
+        })),
+      });
+    }
+
+    if (clientBorrowings.length > 0) {
+      sheets.push({
+        sheetName: 'Borrowings',
+        columns: [
+          { header: 'Date', key: 'date', width: 12 },
+          { header: 'Amount', key: 'amount', width: 15 },
+          { header: 'Rate/Mo', key: 'rate', width: 10 },
+          { header: 'Interest', key: 'interest', width: 15 },
+          { header: 'Total Credit', key: 'totalCredit', width: 15 },
+          { header: 'Status', key: 'status', width: 10 },
+        ],
+        data: clientBorrowings.map((b, idx) => ({
+          date: formatDate(b.borrowDate),
+          amount: b.amount,
+          rate: b.monthlyInterestRate,
+          interest: borrowingSummaries[idx].interestTillFYEnd,
+          totalCredit: borrowingSummaries[idx].totalCredit,
+          status: b.status || 'active',
+        })),
+      });
+    }
+
+    if (sheets.length > 0) {
+      exportMultiSheetExcel(sheets, `${clientName.replace(/\s+/g, '_')}`);
+    }
+  };
+
   return (
     <div>
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <Link to="/lending/finalized" className="btn btn-sm btn-outline" title="Back">←</Link>
+          <Link to="/money-lending/finalized" className="btn btn-sm btn-outline" title="Back">←</Link>
           <h1>{clientName}</h1>
+        </div>
+        <div className="page-actions">
+          {(clientLoans.length > 0 || clientBorrowings.length > 0) && (
+            <button className="btn btn-export" onClick={handleExport}>📥 Export Excel</button>
+          )}
         </div>
       </div>
 
@@ -87,7 +145,7 @@ export default function ClientDetail() {
                 return (
                   <tr key={loan.id}>
                     <td>
-                      <Link to={`/lending/${loan.id}`} style={{ color: '#4361ee' }}>
+                      <Link to={`/money-lending/lending/${loan.id}`} style={{ color: '#4361ee' }}>
                         {formatDate(loan.loanDate)}
                       </Link>
                     </td>
@@ -134,7 +192,7 @@ export default function ClientDetail() {
                 return (
                   <tr key={b.id}>
                     <td>
-                      <Link to={`/lending/borrowings/${b.id}`} style={{ color: '#4361ee' }}>
+                      <Link to={`/money-lending/borrowing/${b.id}`} style={{ color: '#4361ee' }}>
                         {formatDate(b.borrowDate)}
                       </Link>
                     </td>

@@ -5,7 +5,7 @@ export default function Dashboard() {
     <div className="dashboard">
       <h1>Apps</h1>
       <div className="card-grid">
-        <Link to="/lending" className="dashboard-card">
+        <Link to="/money-lending/lending" className="dashboard-card">
           <span className="dashboard-card-icon">💰</span>
           <h3>Money Lending</h3>
           <p>Track loans, repayments & interest</p>

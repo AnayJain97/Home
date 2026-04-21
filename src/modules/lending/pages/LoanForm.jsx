@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useDocument, addDocument, updateDocument } from '../../../hooks/useFirestore';
-import { toInputDate, fromInputDate } from '../../../utils/dateUtils';
+import { toInputDate, fromInputDate, getFYEndDate } from '../../../utils/dateUtils';
 import Toast from '../../../components/Toast';
 
 export default function LoanForm() {
@@ -13,11 +13,10 @@ export default function LoanForm() {
 
   const [form, setForm] = useState({
     clientName: '',
-    clientPhone: '',
     principalAmount: '',
-    monthlyInterestRate: '',
+    monthlyInterestRate: '0.8',
     loanDate: new Date().toISOString().slice(0, 10),
-    endDate: '',
+    endDate: toInputDate(getFYEndDate()),
     notes: '',
   });
   const [submitting, setSubmitting] = useState(false);
@@ -28,7 +27,6 @@ export default function LoanForm() {
     if (isEdit && existing) {
       setForm({
         clientName: existing.clientName || '',
-        clientPhone: existing.clientPhone || '',
         principalAmount: String(existing.principalAmount || ''),
         monthlyInterestRate: String(existing.monthlyInterestRate || ''),
         loanDate: toInputDate(existing.loanDate),
@@ -63,7 +61,6 @@ export default function LoanForm() {
     try {
       const data = {
         clientName: form.clientName.trim(),
-        clientPhone: form.clientPhone.trim(),
         principalAmount: principal,
         monthlyInterestRate: rate,
         loanDate: fromInputDate(form.loanDate),
@@ -75,12 +72,12 @@ export default function LoanForm() {
       if (isEdit) {
         await updateDocument(`loans/${id}`, data);
         setToast({ message: 'Loan updated successfully', type: 'success' });
-        setTimeout(() => navigate(`/lending/${id}`), 500);
+        setTimeout(() => navigate(`/money-lending/lending/${id}`), 500);
       } else {
         data.totalRepaid = 0;
         const docRef = await addDocument('loans', data);
         setToast({ message: 'Loan created successfully', type: 'success' });
-        setTimeout(() => navigate(`/lending/${docRef.id}`), 500);
+        setTimeout(() => navigate(`/money-lending/lending/${docRef.id}`), 500);
       }
     } catch (err) {
       console.error(err);
@@ -98,13 +95,27 @@ export default function LoanForm() {
     <div>
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <Link to="/lending" className="btn btn-sm btn-outline" title="Back to loans">←</Link>
+          <Link to="/money-lending/lending" className="btn btn-sm btn-outline" title="Back to loans">←</Link>
           <h1>{isEdit ? 'Edit Loan' : 'New Loan'}</h1>
         </div>
       </div>
 
       <div className="card">
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} onKeyDown={(e) => {
+          if (e.key === 'Enter' && !e.ctrlKey) {
+            const inputs = Array.from(e.currentTarget.querySelectorAll('input, select, textarea'));
+            const idx = inputs.indexOf(e.target);
+            if (idx >= 0 && idx < inputs.length - 1) {
+              e.preventDefault();
+              inputs[idx + 1].focus();
+            } else if (idx === inputs.length - 1) {
+              e.preventDefault();
+            }
+          } else if (e.key === 'Enter' && e.ctrlKey) {
+            e.preventDefault();
+            handleSubmit(e);
+          }
+        }}>
           <div className="form-grid">
             <div className="form-group">
               <label>Client Name *</label>
@@ -115,16 +126,6 @@ export default function LoanForm() {
                 onChange={handleChange}
                 placeholder="Enter client name"
                 required
-              />
-            </div>
-            <div className="form-group">
-              <label>Client Phone</label>
-              <input
-                type="tel"
-                name="clientPhone"
-                value={form.clientPhone}
-                onChange={handleChange}
-                placeholder="Phone number (optional)"
               />
             </div>
             <div className="form-group">
@@ -141,21 +142,17 @@ export default function LoanForm() {
               />
             </div>
             <div className="form-group">
-              <label>Monthly Interest Rate (%) *</label>
+              <label>Loan End Date</label>
               <input
-                type="number"
-                name="monthlyInterestRate"
-                value={form.monthlyInterestRate}
+                type="date"
+                name="endDate"
+                value={form.endDate}
                 onChange={handleChange}
-                placeholder="e.g. 2"
-                min="0"
-                max="100"
-                step="any"
-                required
+                min={form.loanDate}
               />
             </div>
             <div className="form-group">
-              <label>Loan Date *</label>
+              <label>Loan Start Date *</label>
               <input
                 type="date"
                 name="loanDate"
@@ -165,13 +162,17 @@ export default function LoanForm() {
               />
             </div>
             <div className="form-group">
-              <label>End Date</label>
+              <label>Monthly Interest Rate (%) *</label>
               <input
-                type="date"
-                name="endDate"
-                value={form.endDate}
+                type="number"
+                name="monthlyInterestRate"
+                value={form.monthlyInterestRate}
                 onChange={handleChange}
-                min={form.loanDate}
+                placeholder="e.g. 0.8"
+                min="0"
+                max="100"
+                step="any"
+                required
               />
             </div>
             <div className="form-group">
@@ -192,6 +193,7 @@ export default function LoanForm() {
             <button type="button" className="btn btn-outline" onClick={() => navigate(-1)}>
               Cancel
             </button>
+            <span style={{ fontSize: '0.75rem', color: '#999', alignSelf: 'center' }}>Ctrl+Enter to save</span>
           </div>
         </form>
       </div>

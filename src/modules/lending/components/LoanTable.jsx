@@ -10,7 +10,7 @@ export default function LoanTable({ loans, summaries, filter }) {
       <div className="empty-state">
         <div className="empty-state-icon">💰</div>
         <p>No loans found. Start by adding your first loan!</p>
-        <Link to="/lending/new" className="btn btn-primary">Add New Loan</Link>
+        <Link to="/money-lending/lending/new" className="btn btn-primary">Add New Loan</Link>
       </div>
     );
   }
@@ -40,7 +40,7 @@ export default function LoanTable({ loans, summaries, filter }) {
                 <td>{formatDate(loan.loanDate)}</td>
                 <td className="text-right">{formatCurrency(loan.principalAmount)}</td>
                 <td>
-                  <Link to={`/lending/${loan.id}`} style={{ color: '#4361ee', fontWeight: 500 }}>
+                  <Link to={`/money-lending/lending/${loan.id}`} style={{ color: '#4361ee', fontWeight: 500 }}>
                     {loan.clientName}
                   </Link>
                 </td>

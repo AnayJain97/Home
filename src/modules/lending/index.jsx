@@ -11,15 +11,16 @@ import ClientDetail from './pages/ClientDetail';
 // Module route config — imported by App.jsx
 const lendingRoutes = (
   <>
-    <Route path="lending" element={<LoanList />} />
-    <Route path="lending/new" element={<LoanForm />} />
-    <Route path="lending/borrowings" element={<BorrowingList />} />
-    <Route path="lending/borrowings/new" element={<BorrowingForm />} />
-    <Route path="lending/borrowings/:id" element={<BorrowingDetail />} />
-    <Route path="lending/finalized" element={<FinalizedView />} />
-    <Route path="lending/client/:name" element={<ClientDetail />} />
-    <Route path="lending/:id" element={<LoanDetail />} />
-    <Route path="lending/:id/edit" element={<LoanForm />} />
+    <Route path="money-lending/lending" element={<LoanList />} />
+    <Route path="money-lending/lending/new" element={<LoanForm />} />
+    <Route path="money-lending/borrowing" element={<BorrowingList />} />
+    <Route path="money-lending/borrowing/new" element={<BorrowingForm />} />
+    <Route path="money-lending/borrowing/:id" element={<BorrowingDetail />} />
+    <Route path="money-lending/borrowing/:id/edit" element={<BorrowingForm />} />
+    <Route path="money-lending/finalized" element={<FinalizedView />} />
+    <Route path="money-lending/client/:name" element={<ClientDetail />} />
+    <Route path="money-lending/lending/:id" element={<LoanDetail />} />
+    <Route path="money-lending/lending/:id/edit" element={<LoanForm />} />
   </>
 );
 

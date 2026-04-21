@@ -37,6 +37,8 @@ export default function BorrowingDetail() {
     }
   };
 
+
+
   if (loading) {
     return <div className="loading-screen"><div className="spinner" /><p>Loading...</p></div>;
   }
@@ -46,7 +48,7 @@ export default function BorrowingDetail() {
       <div className="empty-state">
         <div className="empty-state-icon">❌</div>
         <p>Borrowing not found.</p>
-        <Link to="/lending/borrowings" className="btn btn-primary">Back to Borrowings</Link>
+        <Link to="/money-lending/borrowing" className="btn btn-primary">Back to Borrowings</Link>
       </div>
     );
   }
@@ -57,10 +59,11 @@ export default function BorrowingDetail() {
     <div>
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <Link to="/lending/borrowings" className="btn btn-sm btn-outline" title="Back">←</Link>
+          <Link to="/money-lending/borrowing" className="btn btn-sm btn-outline" title="Back">←</Link>
           <h1>{borrowing.clientName}</h1>
         </div>
         <div className="page-actions">
+          <Link to={`/money-lending/borrowing/${id}/edit`} className="btn btn-outline">✏️ Edit</Link>
           {status === 'active' ? (
             <button className="btn btn-danger" onClick={handleClose}>Close Borrowing</button>
           ) : (
