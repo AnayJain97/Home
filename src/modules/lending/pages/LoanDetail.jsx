@@ -62,12 +62,13 @@ export default function LoanDetail() {
           <h1>{loan.clientName}</h1>
         </div>
         <div className="page-actions">
-          {canWrite && <Link to={`/money-lending/lending/${id}/edit`} className="btn btn-outline">✏️ Edit</Link>}
-          {canWrite && (loan.status === 'active' ? (
+          {canWrite && !loan.isCarryForward && <Link to={`/money-lending/lending/${id}/edit`} className="btn btn-outline">✏️ Edit</Link>}
+          {canWrite && !loan.isCarryForward && (loan.status === 'active' ? (
             <button className="btn btn-danger" onClick={handleCloseLoan}>Close Loan</button>
           ) : (
             <button className="btn btn-success" onClick={handleReopenLoan}>Reopen Loan</button>
           ))}
+          {loan.isCarryForward && <span className="carry-forward-badge" style={{ fontSize: '0.85rem', padding: '0.3rem 0.75rem' }}>↪ Carry Forward — Auto-managed</span>}
         </div>
       </div>
 

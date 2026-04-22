@@ -64,12 +64,13 @@ export default function BorrowingDetail() {
           <h1>{borrowing.clientName}</h1>
         </div>
         <div className="page-actions">
-          {canWrite && <Link to={`/money-lending/borrowing/${id}/edit`} className="btn btn-outline">✏️ Edit</Link>}
-          {canWrite && (status === 'active' ? (
+          {canWrite && !borrowing.isCarryForward && <Link to={`/money-lending/borrowing/${id}/edit`} className="btn btn-outline">✏️ Edit</Link>}
+          {canWrite && !borrowing.isCarryForward && (status === 'active' ? (
             <button className="btn btn-danger" onClick={handleClose}>Close Borrowing</button>
           ) : (
             <button className="btn btn-success" onClick={handleReopen}>Reopen Borrowing</button>
           ))}
+          {borrowing.isCarryForward && <span className="carry-forward-badge" style={{ fontSize: '0.85rem', padding: '0.3rem 0.75rem' }}>↪ Carry Forward — Auto-managed</span>}
         </div>
       </div>
 

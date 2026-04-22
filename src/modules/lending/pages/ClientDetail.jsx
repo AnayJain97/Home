@@ -3,8 +3,9 @@ import { useParams, Link } from 'react-router-dom';
 import { useCollection } from '../../../hooks/useFirestore';
 import { getLendingSummary, getBorrowingSummary, getClientFinalized } from '../utils/lendingCalcs';
 import { formatCurrency, formatPercent } from '../../../utils/formatUtils';
-import { formatDate } from '../../../utils/dateUtils';
+import { formatDate, getCurrentFYLabel, toJSDate } from '../../../utils/dateUtils';
 import Tooltip from '../../../components/Tooltip';
+import FYAccordion from '../components/FYAccordion';
 import { exportMultiSheetExcel } from '../../../services/exportService';
 import { useOrg, getOrgCollection } from '../../../context/OrgContext';
 
@@ -28,11 +29,38 @@ export default function ClientDetail() {
   const borrowingSummaries = useMemo(() => clientBorrowings.map(getBorrowingSummary), [clientBorrowings]);
 
   const finalized = useMemo(() => {
-    const activeLoans = clientLoans.filter(l => l.status === 'active');
-    const activeBorrowings = clientBorrowings.filter(b => (b.status || 'active') === 'active');
+    const currentFY = getCurrentFYLabel();
+    const activeLoans = clientLoans.filter(l => l.status === 'active' && getCurrentFYLabel(toJSDate(l.loanDate)) === currentFY);
+    const activeBorrowings = clientBorrowings.filter(b => (b.status || 'active') === 'active' && getCurrentFYLabel(toJSDate(b.borrowDate)) === currentFY);
     const results = getClientFinalized(activeLoans, activeBorrowings);
     return results.length > 0 ? results[0] : null;
   }, [clientLoans, clientBorrowings]);
+
+  // Group loans by FY
+  const loansByFY = useMemo(() => {
+    const grouped = {};
+    clientLoans.forEach((loan, idx) => {
+      const fy = getCurrentFYLabel(toJSDate(loan.loanDate));
+      if (!grouped[fy]) grouped[fy] = [];
+      grouped[fy].push({ loan, summary: loanSummaries[idx] });
+    });
+    const sorted = {};
+    Object.keys(grouped).sort((a, b) => b.localeCompare(a)).forEach(k => { sorted[k] = grouped[k]; });
+    return sorted;
+  }, [clientLoans, loanSummaries]);
+
+  // Group borrowings by FY
+  const borrowingsByFY = useMemo(() => {
+    const grouped = {};
+    clientBorrowings.forEach((b, idx) => {
+      const fy = getCurrentFYLabel(toJSDate(b.borrowDate));
+      if (!grouped[fy]) grouped[fy] = [];
+      grouped[fy].push({ borrowing: b, summary: borrowingSummaries[idx] });
+    });
+    const sorted = {};
+    Object.keys(grouped).sort((a, b) => b.localeCompare(a)).forEach(k => { sorted[k] = grouped[k]; });
+    return sorted;
+  }, [clientBorrowings, borrowingSummaries]);
 
   if (loadingLoans || loadingBorrowings) {
     return <div className="loading-screen"><div className="spinner" /><p>Loading...</p></div>;
@@ -104,19 +132,19 @@ export default function ClientDetail() {
         </div>
       </div>
 
-      {/* Net Summary */}
+      {/* Net Summary — Current FY */}
       {finalized && (
         <div className="summary-grid">
           <div className="summary-card">
-            <div className="label">Total Lending Due</div>
+            <div className="label">Total Lending Due (Current FY)</div>
             <div className="value" style={{ color: '#28a745' }}>{formatCurrency(finalized.totalLendingDue)}</div>
           </div>
           <div className="summary-card">
-            <div className="label">Total Borrowing Credit</div>
+            <div className="label">Total Borrowing Credit (Current FY)</div>
             <div className="value" style={{ color: '#dc3545' }}>{formatCurrency(finalized.totalBorrowingCredit)}</div>
           </div>
           <div className="summary-card">
-            <div className="label">Net Amount</div>
+            <div className="label">Net Amount (Current FY)</div>
             <div className="value" style={{ color: finalized.netAmount >= 0 ? '#28a745' : '#dc3545', fontWeight: 700 }}>
               {finalized.netAmount >= 0 ? '+' : '−'}{formatCurrency(Math.abs(finalized.netAmount))}
             </div>
@@ -129,46 +157,48 @@ export default function ClientDetail() {
       {clientLoans.length === 0 ? (
         <p style={{ color: '#999' }}>No lending records for this client.</p>
       ) : (
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th className="text-right">Principal</th>
-                <th className="text-right">Rate/Mo</th>
-                <th className="text-right">Interest</th>
-                <th className="text-right">Total Due</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {clientLoans.map((loan, idx) => {
-                const s = loanSummaries[idx];
-                return (
-                  <tr key={loan.id}>
-                    <td>
-                      <Link to={`/money-lending/lending/${loan.id}`} style={{ color: '#4361ee' }}>
-                        {formatDate(loan.loanDate)}
-                      </Link>
-                    </td>
-                    <td className="text-right">{formatCurrency(loan.principalAmount)}</td>
-                    <td className="text-right">{formatPercent(loan.monthlyInterestRate)}</td>
-                    <td className="text-right" style={{ color: '#28a745' }}>
-                      {formatCurrency(s.interestTillFYEnd)}
-                      <Tooltip text={s.formulaText} />
-                    </td>
-                    <td className="text-right" style={{ color: '#28a745', fontWeight: 600 }}>
-                      {formatCurrency(s.totalDue)}
-                    </td>
-                    <td>
-                      <span className={`badge badge-${loan.status}`}>{loan.status}</span>
-                    </td>
+        <FYAccordion
+          groupedData={loansByFY}
+          renderSection={(fy, items) => (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th className="text-right">Principal</th>
+                    <th className="text-right">Rate/Mo</th>
+                    <th className="text-right">Interest</th>
+                    <th className="text-right">Total Due</th>
+                    <th>Status</th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody>
+                  {items.map(({ loan, summary: s }) => (
+                    <tr key={loan.id} className={loan.isCarryForward ? 'carry-forward-row' : ''}>
+                      <td>
+                        <Link to={`/money-lending/lending/${loan.id}`} style={{ color: '#4361ee' }}>
+                          {formatDate(loan.loanDate)}
+                        </Link>
+                      </td>
+                      <td className="text-right">{formatCurrency(loan.principalAmount)}</td>
+                      <td className="text-right">{formatPercent(loan.monthlyInterestRate)}</td>
+                      <td className="text-right" style={{ color: '#28a745' }}>
+                        {formatCurrency(s.interestTillFYEnd)}
+                        <Tooltip text={s.formulaText} />
+                      </td>
+                      <td className="text-right" style={{ color: '#28a745', fontWeight: 600 }}>
+                        {formatCurrency(s.totalDue)}
+                      </td>
+                      <td>
+                        <span className={`badge badge-${loan.status}`}>{loan.status}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        />
       )}
 
       {/* Borrowings */}
@@ -176,46 +206,48 @@ export default function ClientDetail() {
       {clientBorrowings.length === 0 ? (
         <p style={{ color: '#999' }}>No borrowing records for this client.</p>
       ) : (
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th className="text-right">Amount</th>
-                <th className="text-right">Rate/Mo</th>
-                <th className="text-right">Interest</th>
-                <th className="text-right">Total Credit</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {clientBorrowings.map((b, idx) => {
-                const s = borrowingSummaries[idx];
-                return (
-                  <tr key={b.id}>
-                    <td>
-                      <Link to={`/money-lending/borrowing/${b.id}`} style={{ color: '#4361ee' }}>
-                        {formatDate(b.borrowDate)}
-                      </Link>
-                    </td>
-                    <td className="text-right">{formatCurrency(b.amount)}</td>
-                    <td className="text-right">{formatPercent(b.monthlyInterestRate)}</td>
-                    <td className="text-right" style={{ color: '#dc3545' }}>
-                      {formatCurrency(s.interestTillFYEnd)}
-                      <Tooltip text={s.formulaText} />
-                    </td>
-                    <td className="text-right" style={{ color: '#dc3545', fontWeight: 600 }}>
-                      {formatCurrency(s.totalCredit)}
-                    </td>
-                    <td>
-                      <span className={`badge badge-${b.status || 'active'}`}>{b.status || 'active'}</span>
-                    </td>
+        <FYAccordion
+          groupedData={borrowingsByFY}
+          renderSection={(fy, items) => (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th className="text-right">Amount</th>
+                    <th className="text-right">Rate/Mo</th>
+                    <th className="text-right">Interest</th>
+                    <th className="text-right">Total Credit</th>
+                    <th>Status</th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody>
+                  {items.map(({ borrowing: b, summary: s }) => (
+                    <tr key={b.id} className={b.isCarryForward ? 'carry-forward-row' : ''}>
+                      <td>
+                        <Link to={`/money-lending/borrowing/${b.id}`} style={{ color: '#4361ee' }}>
+                          {formatDate(b.borrowDate)}
+                        </Link>
+                      </td>
+                      <td className="text-right">{formatCurrency(b.amount)}</td>
+                      <td className="text-right">{formatPercent(b.monthlyInterestRate)}</td>
+                      <td className="text-right" style={{ color: '#dc3545' }}>
+                        {formatCurrency(s.interestTillFYEnd)}
+                        <Tooltip text={s.formulaText} />
+                      </td>
+                      <td className="text-right" style={{ color: '#dc3545', fontWeight: 600 }}>
+                        {formatCurrency(s.totalCredit)}
+                      </td>
+                      <td>
+                        <span className={`badge badge-${b.status || 'active'}`}>{b.status || 'active'}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        />
       )}
     </div>
   );

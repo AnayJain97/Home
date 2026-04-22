@@ -14,11 +14,19 @@ export default function LoanForm() {
   useEffect(() => { if (!canWrite) navigate('/money-lending/lending', { replace: true }); }, [canWrite, navigate]);
 
   const { data: existing, loading: loadingDoc } = useDocument(isEdit ? `${getOrgCollection(selectedOrg, 'loans')}/${id}` : null);
+
+  // Redirect away if trying to edit a carry-forward entry
+  useEffect(() => {
+    if (isEdit && existing && existing.isCarryForward) {
+      navigate(`/money-lending/lending/${id}`, { replace: true });
+    }
+  }, [isEdit, existing, id, navigate]);
+
   const { data: allLoans } = useCollection(getOrgCollection(selectedOrg, 'loans'));
 
   const clientNames = useMemo(() => {
     const names = new Set();
-    allLoans.forEach(l => names.add(l.clientName));
+    allLoans.filter(l => !l.isCarryForward).forEach(l => names.add(l.clientName));
     return [...names];
   }, [allLoans]);
 

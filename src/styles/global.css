@@ -354,3 +354,53 @@ tr:hover td { background: #fafbfc; }
     font-size: 0.85rem;
   }
 }
+
+/* === FY Accordion === */
+.fy-accordion { display: flex; flex-direction: column; gap: 0.75rem; }
+
+.fy-section {
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.fy-section-current { box-shadow: 0 2px 12px rgba(67,97,238,0.12); }
+
+.fy-header {
+  display: flex; align-items: center; gap: 0.6rem;
+  width: 100%; padding: 0.75rem 1rem;
+  background: #f8f9fa; border: none; cursor: pointer;
+  font-size: 0.9rem; font-weight: 600; color: #333;
+  transition: background 0.15s;
+  text-align: left;
+}
+.fy-header:hover { background: #eef0f4; }
+.fy-header-open { background: #eef0f4; }
+
+.fy-header-arrow { font-size: 0.7rem; color: #888; width: 1rem; text-align: center; }
+.fy-header-label { font-size: 0.95rem; }
+.fy-header-count { font-size: 0.8rem; color: #888; font-weight: 400; }
+
+.fy-badge-current {
+  margin-left: auto;
+  font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+  background: #4361ee; color: #fff;
+  padding: 0.15rem 0.5rem; border-radius: 10px;
+  letter-spacing: 0.3px;
+}
+
+.fy-content { padding: 0; }
+.fy-content .table-wrap { box-shadow: none; border-radius: 0; }
+
+/* === Carry-Forward Row === */
+tr.carry-forward-row { background: #f0f4ff; }
+tr.carry-forward-row:hover td { background: #e8eeff; }
+
+.carry-forward-badge {
+  display: inline-block;
+  font-size: 0.68rem; font-weight: 600; text-transform: uppercase;
+  background: #e0e7ff; color: #4361ee;
+  padding: 0.1rem 0.45rem; border-radius: 8px;
+  margin-left: 0.4rem; letter-spacing: 0.3px;
+  vertical-align: middle;
+}

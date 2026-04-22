@@ -49,7 +49,7 @@ export default function RapidEntry({ type, allLoans = [], open, onToggle }) {
   // Client name list for autocomplete (both lending and borrowing)
   const clientRates = useMemo(() => {
     const map = {};
-    allLoans.forEach(l => {
+    allLoans.filter(l => !l.isCarryForward).forEach(l => {
       const key = l.clientName.trim().toLowerCase();
       if (!map[key]) map[key] = { clientName: l.clientName, rate: l.monthlyInterestRate };
     });

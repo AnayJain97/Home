@@ -1,11 +1,13 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useCollection, deleteDocument } from '../../../hooks/useFirestore';
+import { useCarryForward } from '../../../hooks/useCarryForward';
 import { getBorrowingSummary } from '../utils/lendingCalcs';
 import { exportToExcel } from '../../../services/exportService';
 import { formatCurrency, formatPercent } from '../../../utils/formatUtils';
-import { formatDate, getCurrentFYLabel } from '../../../utils/dateUtils';
+import { formatDate, getCurrentFYLabel, toJSDate } from '../../../utils/dateUtils';
 import LendingTabs from '../components/LendingTabs';
+import FYAccordion from '../components/FYAccordion';
 import Tooltip from '../../../components/Tooltip';
 import Toast from '../../../components/Toast';
 import RapidEntry from '../components/RapidEntry';
@@ -23,6 +25,9 @@ export default function BorrowingList() {
 
   const { data: allBorrowings, loading } = useCollection(getOrgCollection(selectedOrg, 'borrowings'));
   const { data: allLoans } = useCollection(getOrgCollection(selectedOrg, 'loans'));
+
+  // Auto-create/update carry-forward entries
+  useCarryForward(selectedOrg, allLoans, allBorrowings, canWrite);
 
   const filtered = useMemo(() => {
     let items = allBorrowings;
@@ -58,6 +63,33 @@ export default function BorrowingList() {
     });
     return combined;
   }, [filtered, summaries, sortCol, sortDir]);
+
+  // Group sorted data by FY for accordion display
+  const fyGroupedData = useMemo(() => {
+    const grouped = {};
+    sortedData.forEach(item => {
+      const fy = getCurrentFYLabel(toJSDate(item.borrowing.borrowDate));
+      if (!grouped[fy]) grouped[fy] = [];
+      grouped[fy].push(item);
+    });
+    const sorted = {};
+    Object.keys(grouped).sort((a, b) => b.localeCompare(a)).forEach(k => { sorted[k] = grouped[k]; });
+    return sorted;
+  }, [sortedData]);
+
+  // Totals for current FY only
+  const currentFYTotals = useMemo(() => {
+    const currentFY = getCurrentFYLabel();
+    const fyItems = sortedData.filter(item => getCurrentFYLabel(toJSDate(item.borrowing.borrowDate)) === currentFY);
+    const fyBorrowings = fyItems.map(d => d.borrowing);
+    const fySummaries = fyItems.map(d => d.summary);
+    return {
+      count: fyBorrowings.length,
+      totalBorrowed: fyBorrowings.reduce((s, b) => s + b.amount, 0),
+      totalInterest: fySummaries.reduce((s, v) => s + v.interestTillFYEnd, 0),
+      totalCredit: fySummaries.reduce((s, v) => s + v.totalCredit, 0),
+    };
+  }, [sortedData]);
 
   const handleSort = (col) => {
     if (sortCol === col) {
@@ -161,20 +193,20 @@ export default function BorrowingList() {
 
       <div className="summary-grid">
         <div className="summary-card">
-          <div className="label">Active Entries</div>
-          <div className="value text-primary">{totals.count}</div>
+          <div className="label">Active Entries (Current FY)</div>
+          <div className="value text-primary">{currentFYTotals.count}</div>
         </div>
         <div className="summary-card">
           <div className="label">Total Received</div>
-          <div className="value">{formatCurrency(totals.totalBorrowed)}</div>
+          <div className="value">{formatCurrency(currentFYTotals.totalBorrowed)}</div>
         </div>
         <div className="summary-card">
           <div className="label">Interest till End Date</div>
-          <div className="value" style={{ color: '#dc3545' }}>{formatCurrency(totals.totalInterest)}</div>
+          <div className="value" style={{ color: '#dc3545' }}>{formatCurrency(currentFYTotals.totalInterest)}</div>
         </div>
         <div className="summary-card">
           <div className="label">Total Credit (Amount + Interest)</div>
-          <div className="value" style={{ color: '#dc3545' }}>{formatCurrency(totals.totalCredit)}</div>
+          <div className="value" style={{ color: '#dc3545' }}>{formatCurrency(currentFYTotals.totalCredit)}</div>
         </div>
       </div>
 
@@ -207,62 +239,69 @@ export default function BorrowingList() {
           <p>No borrowings found.</p>
         </div>
       ) : (
-        <div className={`table-wrap${filter === 'closed' ? ' table-closed' : ''}`}>
-          <table>
-            <thead>
-              <tr>
-                {filter === 'closed' && <th style={{ width: '2.5rem' }}></th>}
-                <SortTh col="date">Date</SortTh>
-                <SortTh col="amount" className="text-right">Amount</SortTh>
-                <SortTh col="client">Client</SortTh>
-                <SortTh col="interest" className="text-right">Int. till End Date</SortTh>
-                <SortTh col="total" className="text-right">Total Credit</SortTh>
-                <SortTh col="rate" className="text-right">Rate/Mo</SortTh>
-                {filter === 'all' && <th>Status</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {sortedData.map(({ borrowing: b, summary: s }) => (
-                <tr key={b.id}>
-                  {filter === 'closed' && (
-                    <td>
-                      {canWrite && (
-                        <button
-                          className="btn-icon-delete"
-                          title="Delete"
-                          onClick={() => handleDelete(b.id, b.clientName)}
-                          disabled={deleting === b.id}
-                        >
-                          {deleting === b.id ? '...' : '🗑️'}
-                        </button>
+        <FYAccordion
+          groupedData={fyGroupedData}
+          emptyMessage="No borrowings found."
+          renderSection={(fy, items) => (
+            <div className={`table-wrap${filter === 'closed' ? ' table-closed' : ''}`}>
+              <table>
+                <thead>
+                  <tr>
+                    {filter === 'closed' && <th style={{ width: '2.5rem' }}></th>}
+                    <SortTh col="date">Date</SortTh>
+                    <SortTh col="amount" className="text-right">Amount</SortTh>
+                    <SortTh col="client">Client</SortTh>
+                    <SortTh col="interest" className="text-right">Int. till End Date</SortTh>
+                    <SortTh col="total" className="text-right">Total Credit</SortTh>
+                    <SortTh col="rate" className="text-right">Rate/Mo</SortTh>
+                    {filter === 'all' && <th>Status</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map(({ borrowing: b, summary: s }) => (
+                    <tr key={b.id} className={b.isCarryForward ? 'carry-forward-row' : ''}>
+                      {filter === 'closed' && (
+                        <td>
+                          {canWrite && !b.isCarryForward && (
+                            <button
+                              className="btn-icon-delete"
+                              title="Delete"
+                              onClick={() => handleDelete(b.id, b.clientName)}
+                              disabled={deleting === b.id}
+                            >
+                              {deleting === b.id ? '...' : '🗑️'}
+                            </button>
+                          )}
+                        </td>
                       )}
-                    </td>
-                  )}
-                  <td>{formatDate(b.borrowDate)}</td>
-                  <td className="text-right">{formatCurrency(b.amount)}</td>
-                  <td>
-                    <Link to={`/money-lending/borrowing/${b.id}`} style={{ color: '#4361ee', fontWeight: 500 }}>
-                      {b.clientName}
-                    </Link>
-                  </td>
-                  <td className="text-right" style={{ color: '#dc3545' }}>
-                    {formatCurrency(s.interestTillFYEnd)}
-                    <Tooltip text={s.formulaText} />
-                  </td>
-                  <td className="text-right" style={{ color: '#dc3545', fontWeight: 600 }}>
-                    {formatCurrency(s.totalCredit)}
-                  </td>
-                  <td className="text-right">{formatPercent(b.monthlyInterestRate)}</td>
-                  {filter === 'all' && (
-                    <td>
-                      <span className={`badge badge-${b.status || 'active'}`}>{b.status || 'active'}</span>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                      <td>{formatDate(b.borrowDate)}</td>
+                      <td className="text-right">{formatCurrency(b.amount)}</td>
+                      <td>
+                        <Link to={`/money-lending/borrowing/${b.id}`} style={{ color: '#4361ee', fontWeight: 500 }}>
+                          {b.clientName}
+                        </Link>
+                        {b.isCarryForward && <span className="carry-forward-badge">↪ Carry Forward</span>}
+                      </td>
+                      <td className="text-right" style={{ color: '#dc3545' }}>
+                        {formatCurrency(s.interestTillFYEnd)}
+                        <Tooltip text={s.formulaText} />
+                      </td>
+                      <td className="text-right" style={{ color: '#dc3545', fontWeight: 600 }}>
+                        {formatCurrency(s.totalCredit)}
+                      </td>
+                      <td className="text-right">{formatPercent(b.monthlyInterestRate)}</td>
+                      {filter === 'all' && (
+                        <td>
+                          <span className={`badge badge-${b.status || 'active'}`}>{b.status || 'active'}</span>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        />
       )}
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}

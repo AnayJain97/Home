@@ -6,6 +6,7 @@ const ORGANIZATIONS = [
   { id: 'VB', name: 'VB', color: '#0097a7' },
   { id: 'AB', name: 'AB', color: '#c2185b' },
   { id: 'SB', name: 'SB', color: '#5d4037' },
+  { id: 'TEST', name: 'TEST', color: '#607d8b' },
 ];
 
 const OrgContext = createContext(null);

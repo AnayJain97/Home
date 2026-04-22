@@ -1,12 +1,14 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useCollection, deleteDocument } from '../../../hooks/useFirestore';
+import { useCarryForward } from '../../../hooks/useCarryForward';
 import { getLendingSummary } from '../utils/lendingCalcs';
 import LoanSummary from '../components/LoanSummary';
 import LendingTabs from '../components/LendingTabs';
+import FYAccordion from '../components/FYAccordion';
 import { exportToExcel } from '../../../services/exportService';
 import { formatCurrency, formatPercent } from '../../../utils/formatUtils';
-import { formatDate, getCurrentFYLabel } from '../../../utils/dateUtils';
+import { formatDate, getCurrentFYLabel, toJSDate } from '../../../utils/dateUtils';
 import Tooltip from '../../../components/Tooltip';
 import Toast from '../../../components/Toast';
 import RapidEntry from '../components/RapidEntry';
@@ -23,6 +25,10 @@ export default function LoanList() {
   const { selectedOrg, canWrite } = useOrg();
 
   const { data: allLoans, loading } = useCollection(getOrgCollection(selectedOrg, 'loans'));
+  const { data: allBorrowings } = useCollection(getOrgCollection(selectedOrg, 'borrowings'));
+
+  // Auto-create/update carry-forward entries
+  useCarryForward(selectedOrg, allLoans, allBorrowings, canWrite);
 
   const filteredLoans = useMemo(() => {
     let loans = allLoans;
@@ -60,6 +66,29 @@ export default function LoanList() {
     });
     return combined;
   }, [filteredLoans, summaries, sortCol, sortDir]);
+
+  // Group sorted data by FY for accordion display
+  const fyGroupedData = useMemo(() => {
+    const grouped = {};
+    sortedData.forEach(item => {
+      const fy = getCurrentFYLabel(toJSDate(item.loan.loanDate));
+      if (!grouped[fy]) grouped[fy] = [];
+      grouped[fy].push(item);
+    });
+    // Sort keys descending
+    const sorted = {};
+    Object.keys(grouped).sort((a, b) => b.localeCompare(a)).forEach(k => { sorted[k] = grouped[k]; });
+    return sorted;
+  }, [sortedData]);
+
+  // Summary for current FY only
+  const currentFYData = useMemo(() => {
+    const currentFY = getCurrentFYLabel();
+    return sortedData.filter(item => getCurrentFYLabel(toJSDate(item.loan.loanDate)) === currentFY);
+  }, [sortedData]);
+
+  const currentFYLoans = useMemo(() => currentFYData.map(d => d.loan), [currentFYData]);
+  const currentFYSummaries = useMemo(() => currentFYData.map(d => d.summary), [currentFYData]);
 
   const handleSort = (col) => {
     if (sortCol === col) {
@@ -154,7 +183,7 @@ export default function LoanList() {
         </div>
       </div>
 
-      <LoanSummary loans={filteredLoans} summaries={summaries} />
+      <LoanSummary loans={currentFYLoans} summaries={currentFYSummaries} />
 
       <RapidEntry type="lending" allLoans={allLoans} open={quickEntryOpen} onToggle={() => setQuickEntryOpen(prev => !prev)} />
 
@@ -185,64 +214,71 @@ export default function LoanList() {
           <p>No loans found.</p>
         </div>
       ) : (
-        <div className={`table-wrap${filter === 'closed' ? ' table-closed' : ''}`}>
-          <table>
-            <thead>
-              <tr>
-                {filter === 'closed' && <th style={{ width: '2.5rem' }}></th>}
-                <SortTh col="date">Date</SortTh>
-                <SortTh col="principal" className="text-right">Principal</SortTh>
-                <SortTh col="client">Client</SortTh>
-                <SortTh col="interest" className="text-right">
-                  Int. till End Date
-                </SortTh>
-                <SortTh col="total" className="text-right">Total Due</SortTh>
-                <SortTh col="rate" className="text-right">Rate/Mo</SortTh>
-                {filter === 'all' && <th>Status</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {sortedData.map(({ loan, summary: s }) => (
-                <tr key={loan.id}>
-                  {filter === 'closed' && (
-                    <td>
-                      {canWrite && (
-                        <button
-                          className="btn-icon-delete"
-                          title="Delete"
-                          onClick={() => handleDelete(loan.id, loan.clientName)}
-                          disabled={deleting === loan.id}
-                        >
-                          {deleting === loan.id ? '...' : '🗑️'}
-                        </button>
+        <FYAccordion
+          groupedData={fyGroupedData}
+          emptyMessage="No loans found."
+          renderSection={(fy, items) => (
+            <div className={`table-wrap${filter === 'closed' ? ' table-closed' : ''}`}>
+              <table>
+                <thead>
+                  <tr>
+                    {filter === 'closed' && <th style={{ width: '2.5rem' }}></th>}
+                    <SortTh col="date">Date</SortTh>
+                    <SortTh col="principal" className="text-right">Principal</SortTh>
+                    <SortTh col="client">Client</SortTh>
+                    <SortTh col="interest" className="text-right">
+                      Int. till End Date
+                    </SortTh>
+                    <SortTh col="total" className="text-right">Total Due</SortTh>
+                    <SortTh col="rate" className="text-right">Rate/Mo</SortTh>
+                    {filter === 'all' && <th>Status</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map(({ loan, summary: s }) => (
+                    <tr key={loan.id} className={loan.isCarryForward ? 'carry-forward-row' : ''}>
+                      {filter === 'closed' && (
+                        <td>
+                          {canWrite && !loan.isCarryForward && (
+                            <button
+                              className="btn-icon-delete"
+                              title="Delete"
+                              onClick={() => handleDelete(loan.id, loan.clientName)}
+                              disabled={deleting === loan.id}
+                            >
+                              {deleting === loan.id ? '...' : '🗑️'}
+                            </button>
+                          )}
+                        </td>
                       )}
-                    </td>
-                  )}
-                  <td>{formatDate(loan.loanDate)}</td>
-                  <td className="text-right">{formatCurrency(loan.principalAmount)}</td>
-                  <td>
-                    <Link to={`/money-lending/lending/${loan.id}`} style={{ color: '#4361ee', fontWeight: 500 }}>
-                      {loan.clientName}
-                    </Link>
-                  </td>
-                  <td className="text-right" style={{ color: '#28a745' }}>
-                    {formatCurrency(s.interestTillFYEnd)}
-                    <Tooltip text={s.formulaText} />
-                  </td>
-                  <td className="text-right" style={{ color: '#28a745', fontWeight: 600 }}>
-                    {formatCurrency(s.totalDue)}
-                  </td>
-                  <td className="text-right">{formatPercent(loan.monthlyInterestRate)}</td>
-                  {filter === 'all' && (
-                    <td>
-                      <span className={`badge badge-${loan.status}`}>{loan.status}</span>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                      <td>{formatDate(loan.loanDate)}</td>
+                      <td className="text-right">{formatCurrency(loan.principalAmount)}</td>
+                      <td>
+                        <Link to={`/money-lending/lending/${loan.id}`} style={{ color: '#4361ee', fontWeight: 500 }}>
+                          {loan.clientName}
+                        </Link>
+                        {loan.isCarryForward && <span className="carry-forward-badge">↪ Carry Forward</span>}
+                      </td>
+                      <td className="text-right" style={{ color: '#28a745' }}>
+                        {formatCurrency(s.interestTillFYEnd)}
+                        <Tooltip text={s.formulaText} />
+                      </td>
+                      <td className="text-right" style={{ color: '#28a745', fontWeight: 600 }}>
+                        {formatCurrency(s.totalDue)}
+                      </td>
+                      <td className="text-right">{formatPercent(loan.monthlyInterestRate)}</td>
+                      {filter === 'all' && (
+                        <td>
+                          <span className={`badge badge-${loan.status}`}>{loan.status}</span>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        />
       )}
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}

@@ -16,10 +16,17 @@ export default function BorrowingForm() {
   const { data: allLoans } = useCollection(getOrgCollection(selectedOrg, 'loans'));
   const { data: existing, loading: loadingDoc } = useDocument(isEdit ? `${getOrgCollection(selectedOrg, 'borrowings')}/${id}` : null);
 
+  // Redirect away if trying to edit a carry-forward entry
+  useEffect(() => {
+    if (isEdit && existing && existing.isCarryForward) {
+      navigate(`/money-lending/borrowing/${id}`, { replace: true });
+    }
+  }, [isEdit, existing, id, navigate]);
+
   // Build client → rate map from existing lendings for auto-fill
   const clientRates = useMemo(() => {
     const map = {};
-    allLoans.forEach(l => {
+    allLoans.filter(l => !l.isCarryForward).forEach(l => {
       const key = l.clientName.trim().toLowerCase();
       if (!map[key]) {
         map[key] = { clientName: l.clientName, rate: l.monthlyInterestRate };

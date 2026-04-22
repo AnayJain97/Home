@@ -1,4 +1,4 @@
-import { getFYEndDate, toJSDate } from '../../../utils/dateUtils';
+import { getFYEndDate, toJSDate, getCurrentFYLabel, fyLabelToEndDate } from '../../../utils/dateUtils';
 
 /**
  * Calculate monthly interest on a principal amount.
@@ -137,4 +137,38 @@ export function getClientFinalized(loans, borrowings) {
       netAmount,
     };
   }).sort((a, b) => a.clientName.localeCompare(b.clientName));
+}
+
+/**
+ * Calculate the net amount for an org in a given FY.
+ * Only considers active, non-carry-forward entries whose date falls in the specified FY.
+ * Carry-forward entries are excluded — the cascade is handled separately in useCarryForward.
+ * Returns the net: positive = clients owe (lending excess), negative = you owe (borrowing excess).
+ */
+export function calculateFYNet(loans, borrowings, fyLabel) {
+  const fyEnd = fyLabelToEndDate(fyLabel);
+
+  const fyLoans = loans.filter(l => {
+    if (l.status !== 'active' || l.isCarryForward) return false;
+    const fy = getCurrentFYLabel(toJSDate(l.loanDate));
+    return fy === fyLabel;
+  });
+
+  const fyBorrowings = borrowings.filter(b => {
+    if ((b.status || 'active') !== 'active' || b.isCarryForward) return false;
+    const fy = getCurrentFYLabel(toJSDate(b.borrowDate));
+    return fy === fyLabel;
+  });
+
+  const totalLendingDue = fyLoans.reduce((sum, loan) => {
+    const s = getLendingSummary({ ...loan, endDate: loan.endDate || fyEnd });
+    return sum + s.totalDue;
+  }, 0);
+
+  const totalBorrowingCredit = fyBorrowings.reduce((sum, b) => {
+    const s = getBorrowingSummary({ ...b, endDate: b.endDate || fyEnd });
+    return sum + s.totalCredit;
+  }, 0);
+
+  return Math.round((totalLendingDue - totalBorrowingCredit) * 100) / 100;
 }
