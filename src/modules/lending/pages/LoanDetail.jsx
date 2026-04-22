@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useDocument, updateDocument } from '../../../hooks/useFirestore';
 import { getLendingSummary } from '../utils/lendingCalcs';
 import { formatCurrency, formatPercent } from '../../../utils/formatUtils';
@@ -9,7 +9,6 @@ import { useOrg, getOrgCollection } from '../../../context/OrgContext';
 
 export default function LoanDetail() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const [toast, setToast] = useState(null);
   const { selectedOrg, canWrite } = useOrg();
 

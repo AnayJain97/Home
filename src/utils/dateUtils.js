@@ -25,44 +25,6 @@ export function getCurrentFYLabel(date = new Date()) {
 }
 
 /**
- * Calculate number of full months between two dates (rounded up).
- * Used for interest calculation: from a given date to FY end.
- */
-export function getMonthsBetween(fromDate, toDate) {
-  const from = new Date(fromDate);
-  const to = new Date(toDate);
-  if (to <= from) return 0;
-  const months = (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth());
-  // If there are remaining days beyond full months, round up
-  const dayDiff = to.getDate() - from.getDate();
-  return dayDiff > 0 ? months + 1 : Math.max(months, 0);
-}
-
-/**
- * Get the number of days in a given month.
- */
-export function getDaysInMonth(year, month) {
-  return new Date(year, month + 1, 0).getDate();
-}
-
-/**
- * Get remaining days in the current month from a given date (inclusive of fromDate).
- */
-export function getRemainingDaysInMonth(fromDate) {
-  const d = new Date(fromDate);
-  const totalDays = getDaysInMonth(d.getFullYear(), d.getMonth());
-  return totalDays - d.getDate();
-}
-
-/**
- * Get total days in the month of a given date.
- */
-export function getTotalDaysInMonth(fromDate) {
-  const d = new Date(fromDate);
-  return getDaysInMonth(d.getFullYear(), d.getMonth());
-}
-
-/**
  * Format a Date or Firestore Timestamp to DD/MM/YYYY string.
  */
 export function formatDate(date) {

@@ -3,7 +3,7 @@ import { getFYEndDate, toJSDate } from '../../../utils/dateUtils';
 /**
  * Calculate monthly interest on a principal amount.
  */
-export function calcMonthlyInterest(principal, monthlyRatePercent) {
+function calcMonthlyInterest(principal, monthlyRatePercent) {
   return principal * (monthlyRatePercent / 100);
 }
 
@@ -11,7 +11,7 @@ export function calcMonthlyInterest(principal, monthlyRatePercent) {
  * Get number of days from a date to the target end date.
  * If endDate is provided, use that; otherwise use current FY end.
  */
-export function getDaysTillEnd(fromDate = new Date(), endDate = null) {
+function getDaysTillEnd(fromDate = new Date(), endDate = null) {
   const now = new Date(fromDate);
   const target = endDate ? new Date(endDate) : getFYEndDate(new Date());
   if (now >= target) return 0;
@@ -23,7 +23,7 @@ export function getDaysTillEnd(fromDate = new Date(), endDate = null) {
  * Calculate interest from a date till end date (or current FY end if no end date).
  * Formula: days × (principal × monthlyRate / 100 / 30)
  */
-export function calcInterestTillFYEnd(principal, monthlyRatePercent, fromDate = new Date(), endDate = null) {
+function calcInterestTillFYEnd(principal, monthlyRatePercent, fromDate = new Date(), endDate = null) {
   const days = getDaysTillEnd(fromDate, endDate);
   if (days === 0) return 0;
   const dailyRate = monthlyRatePercent / 30;
@@ -34,7 +34,7 @@ export function calcInterestTillFYEnd(principal, monthlyRatePercent, fromDate = 
 /**
  * Build the formula description string for tooltip display.
  */
-export function getInterestFormula(principal, monthlyRatePercent, fromDate = new Date(), endDate = null) {
+function getInterestFormula(principal, monthlyRatePercent, fromDate = new Date(), endDate = null) {
   const now = new Date(fromDate);
   const target = endDate ? new Date(endDate) : getFYEndDate(new Date());
   if (now >= target) return 'Period ended — no interest due';
