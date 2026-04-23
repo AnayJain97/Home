@@ -92,7 +92,6 @@ export default function RapidEntry({ type, allLoans = [], open, onToggle }) {
         monthlyInterestRate: rate,
         endDate: defaults.endDate ? fromInputDate(defaults.endDate) : null,
         notes: defaults.notes.trim(),
-        status: 'active',
       };
 
       if (isLending) {

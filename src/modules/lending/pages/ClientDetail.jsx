@@ -30,8 +30,8 @@ export default function ClientDetail() {
 
   const finalized = useMemo(() => {
     const currentFY = getCurrentFYLabel();
-    const activeLoans = clientLoans.filter(l => l.status === 'active' && getCurrentFYLabel(toJSDate(l.loanDate)) === currentFY);
-    const activeBorrowings = clientBorrowings.filter(b => (b.status || 'active') === 'active' && getCurrentFYLabel(toJSDate(b.borrowDate)) === currentFY);
+    const activeLoans = clientLoans.filter(l => getCurrentFYLabel(toJSDate(l.loanDate)) === currentFY);
+    const activeBorrowings = clientBorrowings.filter(b => getCurrentFYLabel(toJSDate(b.borrowDate)) === currentFY);
     const results = getClientFinalized(activeLoans, activeBorrowings);
     return results.length > 0 ? results[0] : null;
   }, [clientLoans, clientBorrowings]);
@@ -78,7 +78,6 @@ export default function ClientDetail() {
           { header: 'Rate/Mo', key: 'rate', width: 10, noTotal: true },
           { header: 'Interest', key: 'interest', width: 15 },
           { header: 'Total Due', key: 'totalDue', width: 15 },
-          { header: 'Status', key: 'status', width: 10 },
         ],
         data: clientLoans.map((loan, idx) => ({
           date: formatDate(loan.loanDate),
@@ -86,7 +85,6 @@ export default function ClientDetail() {
           rate: loan.monthlyInterestRate,
           interest: loanSummaries[idx].interestTillFYEnd,
           totalDue: loanSummaries[idx].totalDue,
-          status: loan.status,
         })),
       });
     }
@@ -100,7 +98,6 @@ export default function ClientDetail() {
           { header: 'Rate/Mo', key: 'rate', width: 10, noTotal: true },
           { header: 'Interest', key: 'interest', width: 15 },
           { header: 'Total Credit', key: 'totalCredit', width: 15 },
-          { header: 'Status', key: 'status', width: 10 },
         ],
         data: clientBorrowings.map((b, idx) => ({
           date: formatDate(b.borrowDate),
@@ -108,7 +105,6 @@ export default function ClientDetail() {
           rate: b.monthlyInterestRate,
           interest: borrowingSummaries[idx].interestTillFYEnd,
           totalCredit: borrowingSummaries[idx].totalCredit,
-          status: b.status || 'active',
         })),
       });
     }
@@ -169,7 +165,6 @@ export default function ClientDetail() {
                     <th className="text-right">Rate/Mo</th>
                     <th className="text-right">Interest</th>
                     <th className="text-right">Total Due</th>
-                    <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -188,9 +183,6 @@ export default function ClientDetail() {
                       </td>
                       <td className="text-right" style={{ color: '#28a745', fontWeight: 600 }}>
                         {formatCurrency(s.totalDue)}
-                      </td>
-                      <td>
-                        <span className={`badge badge-${loan.status}`}>{loan.status}</span>
                       </td>
                     </tr>
                   ))}
@@ -218,7 +210,6 @@ export default function ClientDetail() {
                     <th className="text-right">Rate/Mo</th>
                     <th className="text-right">Interest</th>
                     <th className="text-right">Total Credit</th>
-                    <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -237,9 +228,6 @@ export default function ClientDetail() {
                       </td>
                       <td className="text-right" style={{ color: '#dc3545', fontWeight: 600 }}>
                         {formatCurrency(s.totalCredit)}
-                      </td>
-                      <td>
-                        <span className={`badge badge-${b.status || 'active'}`}>{b.status || 'active'}</span>
                       </td>
                     </tr>
                   ))}

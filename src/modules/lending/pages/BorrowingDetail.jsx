@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { useDocument, updateDocument } from '../../../hooks/useFirestore';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useDocument, deleteDocument } from '../../../hooks/useFirestore';
 import { getBorrowingSummary } from '../utils/lendingCalcs';
 import { formatCurrency, formatPercent } from '../../../utils/formatUtils';
 import { formatDate } from '../../../utils/dateUtils';
@@ -9,6 +9,7 @@ import { useOrg, getOrgCollection } from '../../../context/OrgContext';
 
 export default function BorrowingDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [toast, setToast] = useState(null);
   const { selectedOrg, canWrite } = useOrg();
 
@@ -19,22 +20,14 @@ export default function BorrowingDetail() {
     return getBorrowingSummary(borrowing);
   }, [borrowing]);
 
-  const handleClose = async () => {
-    if (!window.confirm('Are you sure you want to close this borrowing?')) return;
+  const handleDelete = async () => {
+    if (!window.confirm(`Are you sure you want to delete this borrowing for "${borrowing?.clientName}"? This cannot be undone.`)) return;
     try {
-      await updateDocument(`${getOrgCollection(selectedOrg, 'borrowings')}/${id}`, { status: 'closed' });
-      setToast({ message: 'Borrowing closed', type: 'success' });
+      await deleteDocument(`${getOrgCollection(selectedOrg, 'borrowings')}/${id}`);
+      setToast({ message: 'Borrowing deleted', type: 'success' });
+      setTimeout(() => navigate('/money-lending/borrowing'), 500);
     } catch (err) {
-      setToast({ message: 'Error closing borrowing', type: 'error' });
-    }
-  };
-
-  const handleReopen = async () => {
-    try {
-      await updateDocument(`${getOrgCollection(selectedOrg, 'borrowings')}/${id}`, { status: 'active' });
-      setToast({ message: 'Borrowing reopened', type: 'success' });
-    } catch (err) {
-      setToast({ message: 'Error reopening borrowing', type: 'error' });
+      setToast({ message: 'Error deleting borrowing', type: 'error' });
     }
   };
 
@@ -54,8 +47,6 @@ export default function BorrowingDetail() {
     );
   }
 
-  const status = borrowing.status || 'active';
-
   return (
     <div>
       <div className="page-header">
@@ -65,11 +56,9 @@ export default function BorrowingDetail() {
         </div>
         <div className="page-actions">
           {canWrite && !borrowing.isCarryForward && <Link to={`/money-lending/borrowing/${id}/edit`} className="btn btn-outline">✏️ Edit</Link>}
-          {canWrite && !borrowing.isCarryForward && (status === 'active' ? (
-            <button className="btn btn-danger" onClick={handleClose}>Close Borrowing</button>
-          ) : (
-            <button className="btn btn-success" onClick={handleReopen}>Reopen Borrowing</button>
-          ))}
+          {canWrite && !borrowing.isCarryForward && (
+            <button className="btn btn-danger" onClick={handleDelete}>🗑️ Delete</button>
+          )}
           {borrowing.isCarryForward && <span className="carry-forward-badge" style={{ fontSize: '0.85rem', padding: '0.3rem 0.75rem' }}>↪ Carry Forward — Auto-managed</span>}
         </div>
       </div>
@@ -92,12 +81,6 @@ export default function BorrowingDetail() {
           <div className="detail-item">
             <div className="detail-label">Borrowing End Date</div>
             <div className="detail-value">{borrowing.endDate ? formatDate(borrowing.endDate) : '—'}</div>
-          </div>
-          <div className="detail-item">
-            <div className="detail-label">Status</div>
-            <div className="detail-value">
-              <span className={`badge badge-${status}`}>{status}</span>
-            </div>
           </div>
           <div className="detail-item">
             <div className="detail-label">Notes</div>

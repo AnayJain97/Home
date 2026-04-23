@@ -106,7 +106,6 @@ export default function BorrowingForm() {
         borrowDate: fromInputDate(form.borrowDate),
         endDate: form.endDate ? fromInputDate(form.endDate) : null,
         notes: form.notes.trim(),
-        status: 'active',
       };
 
       if (isEdit) {

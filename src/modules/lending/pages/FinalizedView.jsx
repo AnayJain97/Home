@@ -20,8 +20,8 @@ export default function FinalizedView() {
 
   // Group active loans & borrowings by FY, compute per-FY finalized summaries
   const fyGroupedFinalized = useMemo(() => {
-    const activeLoans = loans.filter(l => l.status === 'active');
-    const activeBorrowings = borrowings.filter(b => (b.status || 'active') === 'active');
+    const activeLoans = loans;
+    const activeBorrowings = borrowings;
 
     // Collect all FYs from both loans and borrowings
     const fySet = new Set();

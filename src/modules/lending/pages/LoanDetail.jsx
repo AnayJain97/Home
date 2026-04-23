@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { useDocument, updateDocument } from '../../../hooks/useFirestore';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useDocument, deleteDocument } from '../../../hooks/useFirestore';
 import { getLendingSummary } from '../utils/lendingCalcs';
 import { formatCurrency, formatPercent } from '../../../utils/formatUtils';
 import { formatDate } from '../../../utils/dateUtils';
@@ -9,6 +9,7 @@ import { useOrg, getOrgCollection } from '../../../context/OrgContext';
 
 export default function LoanDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [toast, setToast] = useState(null);
   const { selectedOrg, canWrite } = useOrg();
 
@@ -19,22 +20,14 @@ export default function LoanDetail() {
     return getLendingSummary(loan);
   }, [loan]);
 
-  const handleCloseLoan = async () => {
-    if (!window.confirm('Are you sure you want to close this loan?')) return;
+  const handleDelete = async () => {
+    if (!window.confirm(`Are you sure you want to delete this loan for "${loan?.clientName}"? This cannot be undone.`)) return;
     try {
-      await updateDocument(`${getOrgCollection(selectedOrg, 'loans')}/${id}`, { status: 'closed' });
-      setToast({ message: 'Loan closed', type: 'success' });
+      await deleteDocument(`${getOrgCollection(selectedOrg, 'loans')}/${id}`);
+      setToast({ message: 'Loan deleted', type: 'success' });
+      setTimeout(() => navigate('/money-lending/lending'), 500);
     } catch (err) {
-      setToast({ message: 'Error closing loan', type: 'error' });
-    }
-  };
-
-  const handleReopenLoan = async () => {
-    try {
-      await updateDocument(`${getOrgCollection(selectedOrg, 'loans')}/${id}`, { status: 'active' });
-      setToast({ message: 'Loan reopened', type: 'success' });
-    } catch (err) {
-      setToast({ message: 'Error reopening loan', type: 'error' });
+      setToast({ message: 'Error deleting loan', type: 'error' });
     }
   };
 
@@ -63,11 +56,9 @@ export default function LoanDetail() {
         </div>
         <div className="page-actions">
           {canWrite && !loan.isCarryForward && <Link to={`/money-lending/lending/${id}/edit`} className="btn btn-outline">✏️ Edit</Link>}
-          {canWrite && !loan.isCarryForward && (loan.status === 'active' ? (
-            <button className="btn btn-danger" onClick={handleCloseLoan}>Close Loan</button>
-          ) : (
-            <button className="btn btn-success" onClick={handleReopenLoan}>Reopen Loan</button>
-          ))}
+          {canWrite && !loan.isCarryForward && (
+            <button className="btn btn-danger" onClick={handleDelete}>🗑️ Delete</button>
+          )}
           {loan.isCarryForward && <span className="carry-forward-badge" style={{ fontSize: '0.85rem', padding: '0.3rem 0.75rem' }}>↪ Carry Forward — Auto-managed</span>}
         </div>
       </div>
@@ -90,12 +81,6 @@ export default function LoanDetail() {
           <div className="detail-item">
             <div className="detail-label">Loan End Date</div>
             <div className="detail-value">{loan.endDate ? formatDate(loan.endDate) : '—'}</div>
-          </div>
-          <div className="detail-item">
-            <div className="detail-label">Status</div>
-            <div className="detail-value">
-              <span className={`badge badge-${loan.status}`}>{loan.status}</span>
-            </div>
           </div>
           <div className="detail-item">
             <div className="detail-label">Notes</div>

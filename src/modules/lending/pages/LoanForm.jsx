@@ -92,7 +92,6 @@ export default function LoanForm() {
         loanDate: fromInputDate(form.loanDate),
         endDate: form.endDate ? fromInputDate(form.endDate) : null,
         notes: form.notes.trim(),
-        status: 'active',
       };
 
       if (isEdit) {

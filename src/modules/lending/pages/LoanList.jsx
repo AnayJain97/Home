@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { useCollection, deleteDocument } from '../../../hooks/useFirestore';
+import { useCollection } from '../../../hooks/useFirestore';
 import { useCarryForward } from '../../../hooks/useCarryForward';
 import { getLendingSummary } from '../utils/lendingCalcs';
 import LoanSummary from '../components/LoanSummary';
@@ -16,31 +16,26 @@ import { useOrg, getOrgCollection } from '../../../context/OrgContext';
 
 export default function LoanList() {
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState('active');
   const [sortCol, setSortCol] = useState('date');
   const [sortDir, setSortDir] = useState('desc');
   const [toast, setToast] = useState(null);
-  const [deleting, setDeleting] = useState(null);
   const [quickEntryOpen, setQuickEntryOpen] = useState(false);
   const { selectedOrg, canWrite } = useOrg();
 
   const { data: allLoans, loading } = useCollection(getOrgCollection(selectedOrg, 'loans'));
-  const { data: allBorrowings } = useCollection(getOrgCollection(selectedOrg, 'borrowings'));
+  const { data: allBorrowings, loading: loadingBorrowings } = useCollection(getOrgCollection(selectedOrg, 'borrowings'));
 
-  // Auto-create/update carry-forward entries
-  useCarryForward(selectedOrg, allLoans, allBorrowings, canWrite);
+  // Auto-create/update carry-forward entries (only when both collections are loaded)
+  useCarryForward(selectedOrg, allLoans, allBorrowings, canWrite && !loading && !loadingBorrowings);
 
   const filteredLoans = useMemo(() => {
     let loans = allLoans;
-    if (filter !== 'all') {
-      loans = loans.filter(l => l.status === filter);
-    }
     if (search.trim()) {
       const s = search.toLowerCase();
       loans = loans.filter(l => l.clientName.toLowerCase().includes(s));
     }
     return loans;
-  }, [allLoans, filter, search]);
+  }, [allLoans, search]);
 
   const summaries = useMemo(() => {
     return filteredLoans.map(getLendingSummary);
@@ -81,10 +76,12 @@ export default function LoanList() {
     return sorted;
   }, [sortedData]);
 
-  // Summary for current FY only
+  // Summary for current FY (includes carry-forward entries which have loanDate in current FY)
   const currentFYData = useMemo(() => {
     const currentFY = getCurrentFYLabel();
-    return sortedData.filter(item => getCurrentFYLabel(toJSDate(item.loan.loanDate)) === currentFY);
+    return sortedData.filter(item =>
+      getCurrentFYLabel(toJSDate(item.loan.loanDate)) === currentFY
+    );
   }, [sortedData]);
 
   const currentFYLoans = useMemo(() => currentFYData.map(d => d.loan), [currentFYData]);
@@ -107,18 +104,14 @@ export default function LoanList() {
   );
 
   const handleExport = () => {
-    const rows = sortedData.map(({ loan, summary: s }) => {
-      const row = {
-        loanDate: formatDate(loan.loanDate),
-        principal: loan.principalAmount,
-        clientName: loan.clientName,
-        interestTillFY: s.interestTillFYEnd,
-        totalDue: s.totalDue,
-        rate: loan.monthlyInterestRate,
-      };
-      if (filter === 'all') row.status = loan.status;
-      return row;
-    });
+    const rows = sortedData.map(({ loan, summary: s }) => ({
+      loanDate: formatDate(loan.loanDate),
+      principal: loan.principalAmount,
+      clientName: loan.clientName,
+      interestTillFY: s.interestTillFYEnd,
+      totalDue: s.totalDue,
+      rate: loan.monthlyInterestRate,
+    }));
 
     const cols = [
       { header: 'Date', key: 'loanDate', width: 12 },
@@ -128,34 +121,8 @@ export default function LoanList() {
       { header: 'Total Due', key: 'totalDue', width: 15 },
       { header: 'Rate/Mo', key: 'rate', width: 10, noTotal: true },
     ];
-    if (filter === 'all') cols.push({ header: 'Status', key: 'status', width: 10 });
 
     exportToExcel(rows, cols, `Loans FY ${getCurrentFYLabel()}`, `${selectedOrg}_Loans_${getCurrentFYLabel()}`);
-  };
-
-  const handleDelete = async (id, name) => {
-    if (!window.confirm(`Delete closed loan for "${name}"?`)) return;
-    setDeleting(id);
-    try {
-      await deleteDocument(`${getOrgCollection(selectedOrg, 'loans')}/${id}`);
-      setToast({ message: 'Loan deleted', type: 'success' });
-    } catch (err) {
-      setToast({ message: 'Error deleting loan', type: 'error' });
-    } finally {
-      setDeleting(null);
-    }
-  };
-
-  const handleDeleteAll = async () => {
-    const closedLoans = allLoans.filter(l => l.status === 'closed');
-    if (!closedLoans.length) return;
-    if (!window.confirm(`Delete all ${closedLoans.length} closed loan(s)? This cannot be undone.`)) return;
-    try {
-      await Promise.all(closedLoans.map(l => deleteDocument(`${getOrgCollection(selectedOrg, 'loans')}/${l.id}`)));
-      setToast({ message: `${closedLoans.length} closed loan(s) deleted`, type: 'success' });
-    } catch (err) {
-      setToast({ message: 'Error deleting some loans', type: 'error' });
-    }
   };
 
   if (loading) {
@@ -177,9 +144,6 @@ export default function LoanList() {
           {filteredLoans.length > 0 && (
             <button className="btn btn-export" onClick={handleExport}>📥 Export Excel</button>
           )}
-          {canWrite && filter === 'closed' && filteredLoans.length > 0 && (
-            <button className="btn btn-danger" onClick={handleDeleteAll}>🗑️ Delete All Closed</button>
-          )}
         </div>
       </div>
 
@@ -195,17 +159,6 @@ export default function LoanList() {
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
-        <div className="filter-tabs">
-          {['active', 'closed', 'all'].map(f => (
-            <button
-              key={f}
-              className={`filter-tab ${filter === f ? 'active' : ''}`}
-              onClick={() => setFilter(f)}
-            >
-              {f.charAt(0).toUpperCase() + f.slice(1)}
-            </button>
-          ))}
-        </div>
       </div>
 
       {sortedData.length === 0 ? (
@@ -218,11 +171,10 @@ export default function LoanList() {
           groupedData={fyGroupedData}
           emptyMessage="No loans found."
           renderSection={(fy, items) => (
-            <div className={`table-wrap${filter === 'closed' ? ' table-closed' : ''}`}>
+            <div className="table-wrap">
               <table>
                 <thead>
                   <tr>
-                    {filter === 'closed' && <th style={{ width: '2.5rem' }}></th>}
                     <SortTh col="date">Date</SortTh>
                     <SortTh col="principal" className="text-right">Principal</SortTh>
                     <SortTh col="client">Client</SortTh>
@@ -231,26 +183,11 @@ export default function LoanList() {
                     </SortTh>
                     <SortTh col="total" className="text-right">Total Due</SortTh>
                     <SortTh col="rate" className="text-right">Rate/Mo</SortTh>
-                    {filter === 'all' && <th>Status</th>}
                   </tr>
                 </thead>
                 <tbody>
                   {items.map(({ loan, summary: s }) => (
                     <tr key={loan.id} className={loan.isCarryForward ? 'carry-forward-row' : ''}>
-                      {filter === 'closed' && (
-                        <td>
-                          {canWrite && !loan.isCarryForward && (
-                            <button
-                              className="btn-icon-delete"
-                              title="Delete"
-                              onClick={() => handleDelete(loan.id, loan.clientName)}
-                              disabled={deleting === loan.id}
-                            >
-                              {deleting === loan.id ? '...' : '🗑️'}
-                            </button>
-                          )}
-                        </td>
-                      )}
                       <td>{formatDate(loan.loanDate)}</td>
                       <td className="text-right">{formatCurrency(loan.principalAmount)}</td>
                       <td>
@@ -267,11 +204,6 @@ export default function LoanList() {
                         {formatCurrency(s.totalDue)}
                       </td>
                       <td className="text-right">{formatPercent(loan.monthlyInterestRate)}</td>
-                      {filter === 'all' && (
-                        <td>
-                          <span className={`badge badge-${loan.status}`}>{loan.status}</span>
-                        </td>
-                      )}
                     </tr>
                   ))}
                 </tbody>
